@@ -389,7 +389,7 @@ export default function BrowseEvents() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
                 >
-                  <EventCard event={event} />
+                  <EventCard event={{ ...event, location: (event as any).location ?? (event as any).venue ?? "Main Auditorium", description: event.description ?? undefined, bannerUrl: event.bannerUrl ?? undefined }} />
                 </motion.div>
               ))}
             </div>

@@ -167,7 +167,7 @@ export default function OrganizerDashboard() {
                           <CardTitle className="text-base font-sans font-extrabold text-foreground leading-snug line-clamp-1">
                             {event.title}
                           </CardTitle>
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{event.location}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{(event as any).location ?? (event as any).venue ?? "Main Auditorium"}</p>
                         </div>
 
                         <div className="space-y-1.5 text-xs">

@@ -65,7 +65,7 @@ export default function CalendarPage() {
     category: ev.category,
     venue: ev.venue,
     color: ev.category === "Technology" ? "bg-primary text-primary-foreground" : ev.category === "Cultural" ? "bg-purple-600 text-white" : ev.category === "Seminar" ? "bg-blue-600 text-white" : "bg-green-600 text-white",
-    organizer: ev.organizerName || "ACM Chapter",
+    organizer: (ev as any).organizerName || "ACM Chapter",
   }));
 
   // Academic Holidays List

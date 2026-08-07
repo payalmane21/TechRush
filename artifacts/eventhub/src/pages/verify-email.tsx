@@ -23,7 +23,7 @@ export default function VerifyEmail() {
   const [email, setEmail] = useState(emailParam);
   const [otp, setOtp] = useState(otpParam);
   const [verifying, setVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState(user?.isEmailVerified || false);
+  const [isVerified, setIsVerified] = useState((user as any)?.isEmailVerified || false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Rate Limiting Resend Timer State
@@ -42,12 +42,11 @@ export default function VerifyEmail() {
 
   // Resend Countdown Timer
   useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setInterval(() => {
-        setResendCooldown((prev) => prev - 1);
-      }, 1000);
-      return () => clearInterval(timer);
-    }
+    if (resendCooldown <= 0) return undefined;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
   }, [resendCooldown]);
 
   const verifyCode = async (targetEmail: string, targetOtp: string) => {

@@ -194,7 +194,7 @@ router.post("/auth/verify-otp", otpVerificationRateLimiter, async (req, res): Pr
     verifiedEmails.add(normEmail);
 
     try {
-      await db.update(usersTable).set({ isEmailVerified: true as any }).where(eq(usersTable.email, normEmail));
+      await db.update(usersTable as any).set({ isEmailVerified: true }).where(eq(usersTable.email, normEmail));
     } catch {}
 
     const targetUser = user || { id: 1, name: "Student", email: normEmail, role: "attendee" };
@@ -471,7 +471,7 @@ router.post("/auth/demo-login", async (req, res): Promise<void> => {
     req.session.userId = user.id;
     req.session.userRole = user.role;
 
-    const token = generateJwtToken({ id: user.id, email: user.email, role: user.role }, true);
+    const token = generateAccessToken({ id: user.id, email: user.email, role: user.role });
 
     res.json({
       id: user.id,
