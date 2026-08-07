@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "build": "pnpm run typecheck:libs && pnpm -r --if-present run build && node -e \"const fs=require('fs'); fs.cpSync('artifacts/eventhub/dist', 'public', {recursive: true})\"",
+    "build": "pnpm run typecheck:libs && pnpm -r --if-present run build && node -e \"const fs=require('fs'); fs.cpSync('artifacts/eventhub/dist', 'public', {recursive: true});\"",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
