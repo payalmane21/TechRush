@@ -1,25 +1,13 @@
 {
-  "version": 2,
-  "builds": [
+  "outputDirectory": "artifacts/eventhub/dist",
+  "rewrites": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "artifacts/eventhub/dist/public"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "https://eventhub-api.onrender.com/api/$1"
+      "source": "/api/:path*",
+      "destination": "https://eventhub-api.onrender.com/api/:path*"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

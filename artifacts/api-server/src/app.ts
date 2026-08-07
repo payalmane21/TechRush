@@ -68,7 +68,9 @@ app.use(
 
 app.use("/api", router);
 
-const staticPath = path.resolve(import.meta.dirname, "../../eventhub/dist/public");
+const staticPath = fs.existsSync(path.resolve(import.meta.dirname, "../../eventhub/dist"))
+  ? path.resolve(import.meta.dirname, "../../eventhub/dist")
+  : path.resolve(import.meta.dirname, "../../eventhub/dist/public");
 
 if (fs.existsSync(staticPath)) {
   app.use(express.static(staticPath));
