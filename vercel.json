@@ -1,5 +1,6 @@
 {
-  "outputDirectory": "artifacts/eventhub/public",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "public",
   "rewrites": [
     {
       "source": "/api/:path*",
