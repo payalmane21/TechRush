@@ -68,7 +68,9 @@ app.use(
 
 app.use("/api", router);
 
-const staticPath = fs.existsSync(path.resolve(import.meta.dirname, "../../eventhub/dist"))
+const staticPath = fs.existsSync(path.resolve(import.meta.dirname, "../../eventhub/public"))
+  ? path.resolve(import.meta.dirname, "../../eventhub/public")
+  : fs.existsSync(path.resolve(import.meta.dirname, "../../eventhub/dist"))
   ? path.resolve(import.meta.dirname, "../../eventhub/dist")
   : path.resolve(import.meta.dirname, "../../eventhub/dist/public");
 

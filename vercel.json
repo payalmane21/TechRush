@@ -1,5 +1,5 @@
 {
-  "outputDirectory": "artifacts/eventhub/dist",
+  "outputDirectory": "artifacts/eventhub/public",
   "rewrites": [
     {
       "source": "/api/:path*",
