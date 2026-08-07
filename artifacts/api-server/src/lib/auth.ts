@@ -173,6 +173,9 @@ declare module "express-session" {
 
 // Unified Auth Middleware supporting both Session Cookies & JWT Bearer Tokens
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  if (!req.session) {
+    (req as any).session = {};
+  }
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
@@ -193,6 +196,9 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 
 export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.session) {
+      (req as any).session = {};
+    }
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
