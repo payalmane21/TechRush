@@ -9,7 +9,8 @@
   },
   "private": true,
   "dependencies": {
-    "@replit/connectors-sdk": "^0.4.1"
+    "@replit/connectors-sdk": "^0.4.1",
+    "vite": "^5.4.11"
   },
   "devDependencies": {
     "@rollup/rollup-win32-x64-msvc": "^4.62.4",
