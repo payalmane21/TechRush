@@ -1,7 +1,6 @@
 {
-  "buildCommand": "pnpm --filter @workspace/eventhub run build",
-  "outputDirectory": "artifacts/eventhub/dist/public",
-  "cleanUrls": true,
+  "buildCommand": "vite build --config vite.config.ts",
+  "outputDirectory": "dist/public",
   "rewrites": [
     {
       "source": "/api/:path*",
