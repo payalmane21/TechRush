@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "EventHub"
+description = "EventHub is a full-stack college event management platform that replaces spreadsheets and WhatsApp groups. It supports three roles — Organizer, Volunteer, and Attendee — with role-based dashboards, QR-code-based registration and check-in, real-time attendance via WebSockets, and event analytics."
+version = "1.0.0"
+id = "artifacts/eventhub"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21273
+
+[services.development]
+run = "pnpm --filter @workspace/eventhub run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/eventhub", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/eventhub/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21273"
+BASE_PATH = "/"

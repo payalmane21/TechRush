@@ -1,0 +1,1 @@
+- [EventHub architecture](eventhub-arch.md) — full-stack college event platform; key quirks around bundling, sessions, and QR tokens.

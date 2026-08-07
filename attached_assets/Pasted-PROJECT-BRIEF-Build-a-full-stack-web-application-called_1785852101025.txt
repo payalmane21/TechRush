@@ -1,0 +1,171 @@
+PROJECT BRIEF
+
+Build a full-stack web application called EventHub — a centralized platform for managing college events, replacing spreadsheets and WhatsApp groups. It must support three user roles (Organizer, Volunteer, Attendee) with role-based dashboards, QR-code-based registration and check-in, and real-time event analytics.
+
+Build this as a production-quality, deployable app, not a prototype. Include proper error handling, input validation, loading/empty states, and responsive design.
+
+TECH STACK
+Frontend: React (Vite) + TypeScript + Tailwind CSS + shadcn/ui components
+Backend: Node.js + Express (TypeScript)
+Database: PostgreSQL (use Replit's built-in PostgreSQL / Neon), accessed via Drizzle ORM
+Auth: Session-based auth with bcrypt password hashing (email + password); JWT is acceptable as an alternative — pick one and be consistent
+QR Codes: qrcode npm package for generation, html5-qrcode (or zxing) for browser-based scanning via device camera
+Real-time updates: WebSockets (Socket.IO) for the live attendance dashboard and live analytics
+State management (frontend): React Query (TanStack Query) for server state
+Charts: Recharts for analytics visualizations
+File structure: Monorepo with /client, /server, /shared (shared TypeScript types/schema)
+USER ROLES & PERMISSIONS
+Admin/Organizer
+Create, edit, publish, archive events
+Manage volunteer applications and assign tasks/shifts
+View real-time check-in dashboard and analytics
+Export attendee/volunteer lists (CSV)
+Manage event categories, venues, capacity limits
+Volunteer
+Apply to volunteer for events
+View assigned tasks, shift timings, and check-in duty stations
+Scan attendee QR codes to check attendees in/out
+Mark own attendance / clock in-out
+View volunteer-specific dashboard (their tasks only)
+Attendee
+Browse/search upcoming events
+Register for events (with capacity/waitlist handling)
+Receive a unique QR code per registration (displayed in-app + downloadable + optionally emailed)
+View registration history and event details
+Cancel/modify registration (if event policy allows)
+
+Use role-based access control (RBAC) middleware on both API routes and frontend route guards. A single user account should have one primary role at signup, but the schema should allow an organizer to also grant volunteer status to a registered attendee.
+
+CORE FEATURES — DETAILED SPEC
+1. Authentication & User Management
+Sign up / login with email + password (hashed with bcrypt)
+Role selection at signup (Attendee or Volunteer applicant); Organizer accounts created by existing admins or via a seeded admin account
+Profile page: name, email, phone, department/college ID, profile picture (optional)
+Password reset flow (can be simplified to a token-based reset for MVP)
+2. Event Creation & Management (Organizer)
+Create event: title, description, category, banner image upload, venue, date/time (start & end), capacity, registration deadline, registration fields (custom fields if time allows)
+Draft vs Published status
+Edit/cancel/archive events
+Duplicate an event as a template for recurring events
+Assign co-organizers
+3. Attendee Registration
+Public event listing page (search, filter by category/date/status)
+Event detail page with "Register" CTA
+Registration form (capture attendee details, respect capacity — auto-waitlist if full)
+On successful registration, generate a unique QR code encoding a signed registration ID (e.g., JWT or HMAC-signed token, not just a plain ID, to prevent spoofing)
+Attendee dashboard: "My Registrations" with QR codes, downloadable as PNG/PDF
+4. QR-Based Check-in/Check-out
+Volunteer-facing "Scan" page using device camera (mobile-first UI)
+Scanning a QR code validates the signed token against the DB, prevents duplicate check-ins, and marks attendance with timestamp
+Support both check-in and check-out (toggle mode or auto-detect state)
+Manual search/check-in fallback (by name/email) in case a QR can't be scanned
+Show instant success/error feedback (green checkmark / red "already checked in" / red "invalid ticket")
+5. Volunteer Onboarding & Task Assignment
+Volunteer application form per event
+Organizer approves/rejects applications
+Task/shift creation by organizer (task name, time slot, location/station, number of volunteers needed)
+Volunteers can view and optionally self-select open shifts, or be manually assigned
+Volunteer dashboard shows their assigned tasks and check-in duty stations
+6. Real-Time Attendance Dashboard (Organizer)
+Live count: registered vs checked-in vs no-show, updated via WebSocket as scans happen
+Table/list of recent check-ins (name, time, station, volunteer who scanned)
+Filter by event, time range, station
+7. Live Event Analytics
+Charts: registration trend over time, check-in rate, capacity utilization, category-wise popularity, volunteer task completion %
+Exportable summary report (CSV/PDF) post-event
+8. Role-Based Dashboards
+/dashboard/organizer — event management, analytics, volunteer management
+/dashboard/volunteer — assigned tasks, scan tool, shift schedule
+/dashboard/attendee — my events, my QR codes, browse events
+DATABASE SCHEMA (suggested — adapt as needed)
+users
+  id, name, email, password_hash, phone, role (enum: admin, organizer, volunteer, attendee),
+  college_id, profile_image_url, created_at
+
+events
+  id, organizer_id (FK users), title, description, category, banner_url,
+  venue, start_time, end_time, capacity, registration_deadline,
+  status (enum: draft, published, cancelled, archived), created_at
+
+registrations
+  id, event_id (FK), user_id (FK), status (enum: registered, waitlisted, cancelled),
+  qr_token (unique, signed), checked_in_at, checked_out_at, registered_at
+
+volunteer_applications
+  id, event_id (FK), user_id (FK), status (enum: pending, approved, rejected), applied_at
+
+tasks
+  id, event_id (FK), title, description, station_location, start_time, end_time,
+  volunteers_needed, created_by (FK users)
+
+task_assignments
+  id, task_id (FK), volunteer_id (FK users), status (enum: assigned, confirmed, completed)
+
+checkin_logs
+  id, registration_id (FK), scanned_by (FK users, nullable), action (enum: check_in, check_out),
+  station, timestamp
+API ARCHITECTURE (REST, prefixed /api)
+POST   /api/auth/signup
+POST   /api/auth/login
+POST   /api/auth/logout
+GET    /api/auth/me
+
+GET    /api/events                 (public list, filters via query params)
+GET    /api/events/:id
+POST   /api/events                 (organizer only)
+PUT    /api/events/:id             (organizer only)
+DELETE /api/events/:id             (organizer only)
+
+POST   /api/events/:id/register    (attendee)
+GET    /api/registrations/me       (attendee's registrations)
+DELETE /api/registrations/:id      (cancel)
+
+POST   /api/checkin/scan           (volunteer — validates QR token, marks attendance)
+POST   /api/checkin/manual         (volunteer — manual fallback)
+GET    /api/events/:id/attendance  (organizer — live dashboard data)
+
+POST   /api/events/:id/volunteer-apply
+GET    /api/events/:id/volunteers  (organizer)
+PUT    /api/volunteer-applications/:id  (approve/reject)
+
+POST   /api/events/:id/tasks
+GET    /api/events/:id/tasks
+PUT    /api/tasks/:id/assign
+
+GET    /api/events/:id/analytics
+
+WebSocket events (Socket.IO namespace /live):
+
+join_event_room(eventId)
+checkin_update -> broadcasts new check-in to organizer dashboard clients
+analytics_update -> pushed on registration/checkin changes
+FRONTEND ROUTES
+/                          - Landing page / event listing
+/events/:id                - Event detail + register
+/login, /signup            - Auth
+/dashboard/attendee        - My registrations + QR codes
+/dashboard/volunteer       - My tasks + scan tool
+/dashboard/volunteer/scan  - QR scanner (camera view)
+/dashboard/organizer       - Event management home
+/dashboard/organizer/events/:id  - Event detail management (registrations, volunteers, tasks, live dashboard, analytics)
+NON-FUNCTIONAL REQUIREMENTS
+Mobile-responsive throughout, especially the QR scanner and check-in flow (volunteers will use phones)
+Input validation on both client and server (use Zod, shared between frontend/backend via /shared schema)
+Proper HTTP status codes and consistent JSON error responses
+Loading skeletons and empty states for all data views
+Environment variables for DB connection, JWT/session secret, etc. (use Replit Secrets)
+Seed script to create a default admin/organizer account and a couple of sample events for demo purposes
+README with setup instructions and a summary of the architecture
+BUILD ORDER (please follow this sequence)
+Scaffold the monorepo (client, server, shared) and set up Postgres + Drizzle schema/migrations
+Build auth (signup/login/session) and role-based route protection
+Build event CRUD (organizer) + public event listing/detail pages
+Build registration flow + QR code generation
+Build QR scanning + check-in/check-out flow
+Build volunteer application + task assignment flow
+Build real-time dashboard with WebSockets
+Build analytics charts
+Polish UI/UX, responsive design, empty/error states
+Add seed data and write the README
+
+After scaffolding, show me the folder structure and schema before writing all the feature code, so I can confirm before you proceed.

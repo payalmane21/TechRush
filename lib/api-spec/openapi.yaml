@@ -3,20 +3,34 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: EventHub API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication & user management
+  - name: events
+    description: Event management
+  - name: registrations
+    description: Attendee registrations
+  - name: checkin
+    description: QR check-in / check-out
+  - name: volunteers
+    description: Volunteer applications & task assignments
+  - name: tasks
+    description: Event tasks
+  - name: dashboard
+    description: Role-based dashboard data
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +38,1319 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Auth ──────────────────────────────────────────────────────────────────
+
+  /auth/signup:
+    post:
+      operationId: authSignup
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupInput"
+      responses:
+        "201":
+          description: User created & session set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: authLogin
+      tags: [auth]
+      summary: Login with email + password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: authLogout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Events ────────────────────────────────────────────────────────────────
+
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: List published events (public)
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Events list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventListResponse"
+    post:
+      operationId: createEvent
+      tags: [events]
+      summary: Create a new event (organizer only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventInput"
+      responses:
+        "201":
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{id}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get event by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateEvent
+      tags: [events]
+      summary: Update event (organizer only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventUpdate"
+      responses:
+        "200":
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteEvent
+      tags: [events]
+      summary: Delete event (organizer only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{id}/register:
+    post:
+      operationId: registerForEvent
+      tags: [registrations]
+      summary: Register current user for an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrationInput"
+      responses:
+        "201":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+        "400":
+          description: Already registered or event full
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{id}/attendance:
+    get:
+      operationId: getEventAttendance
+      tags: [events]
+      summary: Live attendance dashboard for an event (organizer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Attendance data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceDashboard"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{id}/analytics:
+    get:
+      operationId: getEventAnalytics
+      tags: [events]
+      summary: Analytics for an event (organizer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventAnalytics"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{id}/volunteers:
+    get:
+      operationId: listEventVolunteers
+      tags: [volunteers]
+      summary: List volunteer applications for an event (organizer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Volunteer applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VolunteerApplication"
+
+  /events/{id}/volunteer-apply:
+    post:
+      operationId: applyToVolunteer
+      tags: [volunteers]
+      summary: Apply to volunteer for an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VolunteerApplicationInput"
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VolunteerApplication"
+        "400":
+          description: Already applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{id}/tasks:
+    get:
+      operationId: listEventTasks
+      tags: [tasks]
+      summary: List tasks for an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task for an event (organizer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Registrations ─────────────────────────────────────────────────────────
+
+  /registrations/me:
+    get:
+      operationId: listMyRegistrations
+      tags: [registrations]
+      summary: Get current user's registrations
+      responses:
+        "200":
+          description: User's registrations with QR tokens
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegistrationWithEvent"
+
+  /registrations/{id}:
+    delete:
+      operationId: cancelRegistration
+      tags: [registrations]
+      summary: Cancel a registration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Cancelled
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Check-in ──────────────────────────────────────────────────────────────
+
+  /checkin/scan:
+    post:
+      operationId: scanQr
+      tags: [checkin]
+      summary: Validate QR token and mark check-in/out (volunteer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QrScanInput"
+      responses:
+        "200":
+          description: Check-in/out result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckinResult"
+        "400":
+          description: Invalid / already checked in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /checkin/manual:
+    post:
+      operationId: manualCheckin
+      tags: [checkin]
+      summary: Manual check-in by name/email fallback (volunteer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualCheckinInput"
+      responses:
+        "200":
+          description: Check-in result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckinResult"
+        "404":
+          description: Attendee not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Volunteer Applications ────────────────────────────────────────────────
+
+  /volunteer-applications/{id}:
+    put:
+      operationId: updateVolunteerApplication
+      tags: [volunteers]
+      summary: Approve or reject a volunteer application (organizer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VolunteerApplicationUpdate"
+      responses:
+        "200":
+          description: Updated application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VolunteerApplication"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Tasks ─────────────────────────────────────────────────────────────────
+
+  /tasks/{id}/assign:
+    put:
+      operationId: assignTask
+      tags: [tasks]
+      summary: Assign a volunteer to a task (organizer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskAssignInput"
+      responses:
+        "200":
+          description: Task assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskAssignment"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tasks/me:
+    get:
+      operationId: listMyTasks
+      tags: [tasks]
+      summary: List tasks assigned to current volunteer
+      responses:
+        "200":
+          description: My assigned tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskWithEvent"
+
+  # ─── Dashboards ────────────────────────────────────────────────────────────
+
+  /dashboard/organizer:
+    get:
+      operationId: getOrganizerDashboard
+      tags: [dashboard]
+      summary: Dashboard data for organizer role
+      responses:
+        "200":
+          description: Organizer dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizerDashboard"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/volunteer:
+    get:
+      operationId: getVolunteerDashboard
+      tags: [dashboard]
+      summary: Dashboard data for volunteer role
+      responses:
+        "200":
+          description: Volunteer dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VolunteerDashboard"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/attendee:
+    get:
+      operationId: getAttendeeDashboard
+      tags: [dashboard]
+      summary: Dashboard data for attendee role
+      responses:
+        "200":
+          description: Attendee dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendeeDashboard"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/my:
+    get:
+      operationId: listMyEvents
+      tags: [events]
+      summary: List events created by the current organizer
+      responses:
+        "200":
+          description: Organizer's events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventListResponse"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    # ─── Auth ─────────────────────────────────────────────────────────────────
+
+    AuthUser:
+      type: object
+      required: [id, name, email, role, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, organizer, volunteer, attendee]
+        phone:
+          type: ["string", "null"]
+        collegeId:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    SignupInput:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        role:
+          type: string
+          enum: [volunteer, attendee]
+        phone:
+          type: string
+        collegeId:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    # ─── Events ───────────────────────────────────────────────────────────────
+
+    Event:
+      type: object
+      required: [id, title, category, venue, startTime, endTime, capacity, status, organizerId, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        category:
+          type: string
+        bannerUrl:
+          type: ["string", "null"]
+        venue:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        capacity:
+          type: integer
+        registrationDeadline:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          type: string
+          enum: [draft, published, cancelled, archived]
+        organizerId:
+          type: integer
+        registeredCount:
+          type: integer
+        checkedInCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    EventDetail:
+      type: object
+      required: [id, title, category, venue, startTime, endTime, capacity, status, organizerId, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        category:
+          type: string
+        bannerUrl:
+          type: ["string", "null"]
+        venue:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        capacity:
+          type: integer
+        registrationDeadline:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          type: string
+          enum: [draft, published, cancelled, archived]
+        organizerId:
+          type: integer
+        organizerName:
+          type: string
+        registeredCount:
+          type: integer
+        checkedInCount:
+          type: integer
+        isRegistered:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    EventListResponse:
+      type: object
+      required: [events, total, page, limit]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    EventInput:
+      type: object
+      required: [title, category, venue, startTime, endTime, capacity]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        category:
+          type: string
+        bannerUrl:
+          type: string
+        venue:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        capacity:
+          type: integer
+          minimum: 1
+        registrationDeadline:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, published]
+
+    EventUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        category:
+          type: string
+        bannerUrl:
+          type: string
+        venue:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        capacity:
+          type: integer
+          minimum: 1
+        registrationDeadline:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, published, cancelled, archived]
+
+    # ─── Registrations ────────────────────────────────────────────────────────
+
+    Registration:
+      type: object
+      required: [id, eventId, userId, status, qrToken, registeredAt]
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        userId:
+          type: integer
+        status:
+          type: string
+          enum: [registered, waitlisted, cancelled]
+        qrToken:
+          type: string
+        qrCodeDataUrl:
+          type: ["string", "null"]
+        checkedInAt:
+          type: ["string", "null"]
+          format: date-time
+        checkedOutAt:
+          type: ["string", "null"]
+          format: date-time
+        registeredAt:
+          type: string
+          format: date-time
+
+    RegistrationWithEvent:
+      type: object
+      required: [id, eventId, userId, status, qrToken, registeredAt]
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        userId:
+          type: integer
+        status:
+          type: string
+          enum: [registered, waitlisted, cancelled]
+        qrToken:
+          type: string
+        qrCodeDataUrl:
+          type: ["string", "null"]
+        checkedInAt:
+          type: ["string", "null"]
+          format: date-time
+        checkedOutAt:
+          type: ["string", "null"]
+          format: date-time
+        registeredAt:
+          type: string
+          format: date-time
+        event:
+          $ref: "#/components/schemas/Event"
+
+    RegistrationInput:
+      type: object
+      properties:
+        notes:
+          type: string
+
+    # ─── Check-in ─────────────────────────────────────────────────────────────
+
+    QrScanInput:
+      type: object
+      required: [qrToken, eventId]
+      properties:
+        qrToken:
+          type: string
+        eventId:
+          type: integer
+        station:
+          type: string
+
+    ManualCheckinInput:
+      type: object
+      required: [eventId]
+      properties:
+        eventId:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        station:
+          type: string
+
+    CheckinResult:
+      type: object
+      required: [success, action, attendeeName, message]
+      properties:
+        success:
+          type: boolean
+        action:
+          type: string
+          enum: [check_in, check_out]
+        attendeeName:
+          type: string
+        attendeeEmail:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # ─── Attendance Dashboard ─────────────────────────────────────────────────
+
+    AttendanceDashboard:
+      type: object
+      required: [eventId, totalRegistered, totalCheckedIn, totalNoShow, recentCheckins]
+      properties:
+        eventId:
+          type: integer
+        totalRegistered:
+          type: integer
+        totalCheckedIn:
+          type: integer
+        totalNoShow:
+          type: integer
+        recentCheckins:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckinLogEntry"
+
+    CheckinLogEntry:
+      type: object
+      required: [id, attendeeName, action, timestamp]
+      properties:
+        id:
+          type: integer
+        attendeeName:
+          type: string
+        attendeeEmail:
+          type: string
+        action:
+          type: string
+          enum: [check_in, check_out]
+        station:
+          type: ["string", "null"]
+        scannedByName:
+          type: ["string", "null"]
+        timestamp:
+          type: string
+          format: date-time
+
+    # ─── Analytics ────────────────────────────────────────────────────────────
+
+    EventAnalytics:
+      type: object
+      required: [eventId, totalRegistered, totalCheckedIn, capacityUtilization, registrationTrend, checkinTimeline]
+      properties:
+        eventId:
+          type: integer
+        totalRegistered:
+          type: integer
+        totalCheckedIn:
+          type: integer
+        totalWaitlisted:
+          type: integer
+        totalCancelled:
+          type: integer
+        capacityUtilization:
+          type: number
+        checkinRate:
+          type: number
+        registrationTrend:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSeriesPoint"
+        checkinTimeline:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSeriesPoint"
+        volunteerTaskCompletion:
+          type: number
+
+    TimeSeriesPoint:
+      type: object
+      required: [date, count]
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+
+    # ─── Volunteers ───────────────────────────────────────────────────────────
+
+    VolunteerApplication:
+      type: object
+      required: [id, eventId, userId, status, appliedAt]
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        userId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        appliedAt:
+          type: string
+          format: date-time
+        volunteerName:
+          type: string
+        volunteerEmail:
+          type: string
+        eventTitle:
+          type: string
+
+    VolunteerApplicationInput:
+      type: object
+      properties:
+        message:
+          type: string
+
+    VolunteerApplicationUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+
+    # ─── Tasks ────────────────────────────────────────────────────────────────
+
+    Task:
+      type: object
+      required: [id, eventId, title, volunteersNeeded, createdAt]
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        stationLocation:
+          type: ["string", "null"]
+        startTime:
+          type: ["string", "null"]
+          format: date-time
+        endTime:
+          type: ["string", "null"]
+          format: date-time
+        volunteersNeeded:
+          type: integer
+        assignedCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    TaskInput:
+      type: object
+      required: [title, volunteersNeeded]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        stationLocation:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        volunteersNeeded:
+          type: integer
+          minimum: 1
+
+    TaskAssignment:
+      type: object
+      required: [id, taskId, volunteerId, status]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        volunteerId:
+          type: integer
+        status:
+          type: string
+          enum: [assigned, confirmed, completed]
+
+    TaskAssignInput:
+      type: object
+      required: [volunteerId]
+      properties:
+        volunteerId:
+          type: integer
+
+    TaskWithEvent:
+      type: object
+      required: [id, eventId, title, volunteersNeeded, createdAt]
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        stationLocation:
+          type: ["string", "null"]
+        startTime:
+          type: ["string", "null"]
+          format: date-time
+        endTime:
+          type: ["string", "null"]
+          format: date-time
+        volunteersNeeded:
+          type: integer
+        assignedCount:
+          type: integer
+        assignmentStatus:
+          type: ["string", "null"]
+        eventTitle:
+          type: string
+        eventVenue:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # ─── Dashboards ───────────────────────────────────────────────────────────
+
+    OrganizerDashboard:
+      type: object
+      required: [totalEvents, publishedEvents, totalRegistrations, totalCheckins, upcomingEvents, recentActivity]
+      properties:
+        totalEvents:
+          type: integer
+        publishedEvents:
+          type: integer
+        totalRegistrations:
+          type: integer
+        totalCheckins:
+          type: integer
+        upcomingEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+
+    VolunteerDashboard:
+      type: object
+      required: [approvedApplications, assignedTasks, upcomingShifts]
+      properties:
+        approvedApplications:
+          type: integer
+        assignedTasks:
+          type: integer
+        upcomingShifts:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskWithEvent"
+        pendingApplications:
+          type: array
+          items:
+            $ref: "#/components/schemas/VolunteerApplication"
+
+    AttendeeDashboard:
+      type: object
+      required: [totalRegistrations, upcomingEvents, pastEvents]
+      properties:
+        totalRegistrations:
+          type: integer
+        upcomingEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegistrationWithEvent"
+        pastEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegistrationWithEvent"
+
+    ActivityItem:
+      type: object
+      required: [id, type, message, timestamp]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
