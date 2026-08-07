@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm --filter @workspace/eventhub run build",
+  "outputDirectory": "artifacts/eventhub/dist/public",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://eventhub-api.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
