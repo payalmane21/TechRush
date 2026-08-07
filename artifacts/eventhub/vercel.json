@@ -2,11 +2,15 @@
   "outputDirectory": "public",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://eventhub-api.onrender.com/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://eventhub-api.onrender.com/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/api",
+      "destination": "https://eventhub-api.onrender.com/api"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
