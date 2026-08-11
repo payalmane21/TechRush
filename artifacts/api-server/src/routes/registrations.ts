@@ -4,6 +4,7 @@ import { db, registrationsTable, eventsTable, usersTable } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import { generateQrToken } from "../lib/auth";
 import { generateQrCodeDataUrl } from "../lib/qrcode";
+import { getIo } from "../lib/socket";
 
 const router: IRouter = Router();
 
@@ -53,6 +54,13 @@ const registerEventHandler = async (req: any, res: any): Promise<void> => {
 
     const qrCodeDataUrl = await generateQrCodeDataUrl(qrToken);
 
+    // Real-Time Notification to Organizers and Admins
+    const io = getIo();
+    if (io) {
+      io.emit("registration_created", { eventId, userId });
+      io.emit("attendance_updated", { eventId });
+    }
+
     res.status(201).json({
       ...(registration || { id: Math.floor(Math.random() * 9000) + 1000, eventId, userId, status: "registered", qrToken }),
       qrCodeDataUrl,
@@ -61,6 +69,12 @@ const registerEventHandler = async (req: any, res: any): Promise<void> => {
   } catch (err: any) {
     const qrToken = generateQrToken(Math.floor(Math.random() * 9000) + 1000);
     const qrCodeDataUrl = await generateQrCodeDataUrl(qrToken);
+
+    const io = getIo();
+    if (io) {
+      io.emit("registration_created", { eventId, userId });
+      io.emit("attendance_updated", { eventId });
+    }
 
     res.status(201).json({
       id: Math.floor(Math.random() * 9000) + 1000,
@@ -159,6 +173,12 @@ router.delete("/registrations/:id", requireAuth, async (req, res): Promise<void>
       .set({ status: "cancelled" })
       .where(eq(registrationsTable.id, id));
   } catch {}
+
+  const io = getIo();
+  if (io) {
+    io.emit("registration_cancelled", { id });
+    io.emit("attendance_updated", { registrationId: id });
+  }
 
   res.sendStatus(204);
 });

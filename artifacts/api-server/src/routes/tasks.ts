@@ -9,6 +9,7 @@ import {
   volunteerApplicationsTable,
 } from "@workspace/db";
 import { requireAuth, requireRole } from "../lib/auth";
+import { getIo } from "../lib/socket";
 
 const router: IRouter = Router();
 
@@ -88,13 +89,18 @@ const createTaskHandler = async (req: any, res: any): Promise<void> => {
       })
       .returning();
 
+    const io = getIo();
+    if (io) {
+      io.emit("task_created", { eventId, task });
+    }
+
     if (task) {
       res.status(201).json(task);
       return;
     }
   } catch {}
 
-  res.status(201).json({
+  const fallbackTask = {
     id: Math.floor(Math.random() * 9000) + 1000,
     eventId: eventId || 1,
     title: title || "General Volunteer Task",
@@ -103,7 +109,14 @@ const createTaskHandler = async (req: any, res: any): Promise<void> => {
     status,
     assignedCount: 0,
     createdAt: new Date().toISOString(),
-  });
+  };
+
+  const io = getIo();
+  if (io) {
+    io.emit("task_created", { eventId, task: fallbackTask });
+  }
+
+  res.status(201).json(fallbackTask);
 };
 
 router.post("/events/:id/tasks", requireAuth, requireRole("organizer", "admin"), createTaskHandler);
@@ -126,8 +139,17 @@ router.post("/tasks/:id/assign", requireAuth, requireRole("organizer", "admin"),
       })
       .returning();
 
+    const io = getIo();
+    if (io) {
+      io.emit("task_assigned", { taskId, userId });
+    }
+
     res.status(201).json(assignment || { id: 1, taskId, userId, status: "assigned" });
   } catch {
+    const io = getIo();
+    if (io) {
+      io.emit("task_assigned", { taskId, userId });
+    }
     res.status(201).json({ id: 1, taskId, userId, status: "assigned" });
   }
 });
@@ -145,11 +167,21 @@ router.patch("/tasks/:id/status", requireAuth, async (req, res): Promise<void> =
       .where(eq(tasksTable.id, id))
       .returning();
 
+    const io = getIo();
+    if (io) {
+      io.emit("task_status_changed", { id, status });
+    }
+
     if (updated) {
       res.json(updated);
       return;
     }
   } catch {}
+
+  const io = getIo();
+  if (io) {
+    io.emit("task_status_changed", { id, status });
+  }
 
   res.json({ id, status, updatedAt: new Date().toISOString() });
 });

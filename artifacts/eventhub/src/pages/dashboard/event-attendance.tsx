@@ -22,6 +22,7 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { realtimeSync } from "@/lib/socket";
 
 export default function EventAttendance() {
   const params = useParams<{ id: string }>();
@@ -40,33 +41,38 @@ export default function EventAttendance() {
   const [station, setStation] = useState("Main Gate Scanner Desk");
   const [lastResult, setLastResult] = useState<{ success: boolean; message: string; isDuplicate?: boolean } | null>(null);
 
-  // Check-in History State
-  const [checkinLogs, setCheckinLogs] = useState<any[]>([
-    {
-      id: 1,
-      attendeeName: "Priya Patel",
-      attendeeEmail: "priya@university.edu",
-      ticketToken: "REG-2026-CULT-942",
-      station: "Main Gate Scanner Desk",
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      isLate: false,
-    },
-    {
-      id: 2,
-      attendeeName: "Aarav Sharma",
-      attendeeEmail: "aarav@university.edu",
-      ticketToken: "REG-2026-HACK-881",
-      station: "Stage Gate B",
-      timestamp: new Date(Date.now() - 1800000).toISOString(),
-      isLate: true,
-    },
-  ]);
+  // Live Check-in History State connected to Backend Audit Logs
+  const [checkinLogs, setCheckinLogs] = useState<any[]>([]);
 
-  // Auto-refetch every 5s for live count updates
+  // Fetch initial checkin logs from server & subscribe to live socket checkins
+  useEffect(() => {
+    realtimeSync.joinEventRoom(eventId);
+
+    fetch(`/api/checkin/logs/${eventId}`)
+      .then((r) => r.json())
+      .then((logs) => {
+        if (Array.isArray(logs) && logs.length > 0) {
+          setCheckinLogs(logs);
+        }
+      })
+      .catch(() => {});
+
+    // Listen to real-time check-in events arriving from any volunteer device
+    const unsubscribe = realtimeSync.onCheckin((newLog) => {
+      if (newLog.eventId === eventId) {
+        setCheckinLogs((prev) => [newLog, ...prev.filter((l) => l.id !== newLog.id)]);
+        refetch();
+      }
+    });
+
+    return () => unsubscribe();
+  }, [eventId, refetch]);
+
+  // Auto-refetch every 3s for live count updates
   useEffect(() => {
     const interval = setInterval(() => {
       refetch();
-    }, 5000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [refetch]);
 

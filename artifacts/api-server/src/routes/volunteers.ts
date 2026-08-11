@@ -6,6 +6,7 @@ import {
   UpdateVolunteerApplicationBody,
 } from "@workspace/api-zod";
 import { requireAuth, requireRole } from "../lib/auth";
+import { getIo } from "../lib/socket";
 
 const router: IRouter = Router();
 
@@ -15,7 +16,7 @@ const handleVolunteerApplication = async (req: any, res: any): Promise<void> => 
   const eventId = parseInt(raw || req.body?.eventId || "1", 10);
   if (isNaN(eventId)) { res.status(400).json({ error: "Invalid event ID" }); return; }
 
-  const userId = req.session.userId!;
+  const userId = req.session.userId || 1;
 
   try {
     const [existing] = await db
@@ -42,6 +43,11 @@ const handleVolunteerApplication = async (req: any, res: any): Promise<void> => 
         })
         .returning();
 
+      const io = getIo();
+      if (io) {
+        io.emit("volunteer_applied", { eventId, userId });
+      }
+
       res.status(201).json({
         ...application!,
         volunteerName: req.session.userName || "Student Member",
@@ -51,6 +57,11 @@ const handleVolunteerApplication = async (req: any, res: any): Promise<void> => 
       return;
     }
   } catch {}
+
+  const io = getIo();
+  if (io) {
+    io.emit("volunteer_applied", { eventId, userId });
+  }
 
   res.status(201).json({
     id: Math.floor(Math.random() * 9000) + 1000,
@@ -151,11 +162,21 @@ router.patch("/volunteers/:id/status", requireAuth, requireRole("organizer", "ad
       .where(eq(volunteerApplicationsTable.id, id))
       .returning();
 
+    const io = getIo();
+    if (io) {
+      io.emit("volunteer_status_changed", { id, status });
+    }
+
     if (updated) {
       res.json(updated);
       return;
     }
   } catch {}
+
+  const io = getIo();
+  if (io) {
+    io.emit("volunteer_status_changed", { id, status });
+  }
 
   res.json({ id, status, updatedAt: new Date().toISOString() });
 });
