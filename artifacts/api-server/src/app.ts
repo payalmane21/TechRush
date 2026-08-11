@@ -33,6 +33,7 @@ app.use(
   }),
 );
 
+// Dynamic CORS allowing localhost, LAN IPs, and mobile browser origins
 app.use(
   cors({
     origin: true,
@@ -58,10 +59,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.COOKIE_SECURE === "true",
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
     },
   }),
 );
@@ -78,11 +79,12 @@ if (fs.existsSync(staticPath)) {
   app.use(express.static(staticPath));
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
-    res.sendFile(path.join(staticPath, "index.html"));
-  });
-} else {
-  app.get("/", (_req, res) => {
-    res.json({ status: "ok", message: "EventHub API Server is running" });
+    const indexHtml = path.resolve(staticPath, "index.html");
+    if (fs.existsSync(indexHtml)) {
+      res.sendFile(indexHtml);
+    } else {
+      next();
+    }
   });
 }
 

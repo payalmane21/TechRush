@@ -29,6 +29,13 @@ export default function VolunteerScan() {
 
   const events = eventsData?.events ?? [];
 
+  // Automatically select the first available event if none selected
+  useEffect(() => {
+    if (!selectedEvent && events.length > 0 && events[0]?.id) {
+      setSelectedEvent(String(events[0].id));
+    }
+  }, [events, selectedEvent]);
+
   const handleScanQr = () => {
     if (!selectedEvent || !qrToken.trim()) return;
     setResult(null);
@@ -61,6 +68,34 @@ export default function VolunteerScan() {
         },
       },
     );
+  };
+
+  // Image/Photo File QR Scanner Fallback for Mobile Phones over LAN
+  const handlePhotoScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const { Html5Qrcode } = await import("html5-qrcode");
+      const html5QrCode = new Html5Qrcode("qr-file-scanner-temp");
+      const decodedText = await html5QrCode.scanFile(file, true);
+      if (decodedText) {
+        setQrToken(decodedText);
+        scanMutation.mutate(
+          { data: { qrToken: decodedText.trim(), eventId: parseInt(selectedEvent || "1", 10), station } },
+          {
+            onSuccess: (data) => {
+              setResult({ success: true, action: data.action, message: data.message ?? "Success", attendeeName: data.attendeeName });
+            },
+            onError: (err: any) => {
+              setResult({ success: false, message: err?.response?.data?.error ?? "Check-in failed" });
+            },
+          },
+        );
+      }
+    } catch (err: any) {
+      setResult({ success: false, message: "Could not detect QR code in photo. Please retry or enter token." });
+    }
   };
 
   // Camera scanner via html5-qrcode
@@ -210,15 +245,31 @@ export default function VolunteerScan() {
                   }
                 `}</style>
                 <div id={scannerDivId} className="w-full rounded-xl overflow-hidden bg-muted min-h-[280px] flex items-center justify-center" />
-                {!scannerActive ? (
-                  <Button className="w-full" onClick={startScanner} disabled={!selectedEvent} size="lg">
-                    <Camera className="w-5 h-5 mr-2" /> Start Camera Scanner
-                  </Button>
-                ) : (
-                  <Button variant="outline" className="w-full" onClick={stopScanner} size="lg">
-                    Stop Scanner
-                  </Button>
-                )}
+                <div id="qr-file-scanner-temp" style={{ display: "none" }} />
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {!scannerActive ? (
+                    <Button className="flex-1" onClick={startScanner} disabled={!selectedEvent} size="lg">
+                      <Camera className="w-5 h-5 mr-2" /> Start Camera Scanner
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="flex-1" onClick={stopScanner} size="lg">
+                      Stop Scanner
+                    </Button>
+                  )}
+                  <label className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handlePhotoScan}
+                      disabled={!selectedEvent}
+                    />
+                    <Button variant="secondary" className="w-full h-11 cursor-pointer" type="button" onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement)?.click()} disabled={!selectedEvent}>
+                      <QrCode className="w-4 h-4 mr-2" /> Scan from Photo / File
+                    </Button>
+                  </label>
+                </div>
                 {!selectedEvent && (
                   <p className="text-xs text-muted-foreground text-center">Select an event first to enable the scanner.</p>
                 )}
