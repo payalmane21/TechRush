@@ -1,6 +1,7 @@
 import { db, eventsTable, registrationsTable, paymentsTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { globalEvents, globalRegistrations, globalPaymentLedger } from "./store";
+import { SERVER_CHATBOT_THEMES, resolveServerThemeCategory, serverSvgToDataUri } from "./chatbot-themes";
 
 export interface ChatAction {
   label: string;
@@ -13,6 +14,11 @@ export interface ChatResponse {
   message: string;
   actions?: ChatAction[];
   suggestedFollowUps?: string[];
+  theme?: string;
+  mascotName?: string;
+  mascotUrl?: string;
+  mascotRole?: string;
+  accentColor?: string;
 }
 
 /**
@@ -148,9 +154,244 @@ export async function getAttendeePayments(userId: number) {
 export async function processAttendeeChatMessage(
   message: string,
   userId: number,
-  userName: string
+  userName: string,
+  eventId?: number
 ): Promise<ChatResponse> {
   const query = message.trim().toLowerCase();
+
+  // 1. Resolve Active Event Context & Thematic Mascot (if eventId is provided)
+  let activeEvent: any = null;
+  let activeTheme = "GENERAL";
+  let themeConfig = SERVER_CHATBOT_THEMES.GENERAL;
+  let activeMascotUrl = serverSvgToDataUri(themeConfig.mascotSvg);
+  let activeMascotName = themeConfig.assistantName;
+  let activeMascotRole = "Official EventHub Concierge";
+
+  if (eventId && !isNaN(Number(eventId))) {
+    try {
+      const [dbEvent] = await db
+        .select()
+        .from(eventsTable)
+        .where(eq(eventsTable.id, Number(eventId)))
+        .limit(1);
+      activeEvent = dbEvent;
+    } catch {}
+
+    if (!activeEvent) {
+      activeEvent = globalEvents.find((e) => e.id === Number(eventId));
+    }
+
+    if (activeEvent) {
+      activeTheme = resolveServerThemeCategory(activeEvent.category, activeEvent.title);
+      themeConfig = SERVER_CHATBOT_THEMES[activeTheme as keyof typeof SERVER_CHATBOT_THEMES] || SERVER_CHATBOT_THEMES.GENERAL;
+      activeMascotUrl = activeEvent.mascotUrl || serverSvgToDataUri(themeConfig.mascotSvg);
+      activeMascotName = activeEvent.mascotUrl ? `${activeEvent.title} Mascot` : themeConfig.assistantName;
+      activeMascotRole = `${activeEvent.title} Assistant`;
+    }
+  }
+
+  const baseThemeMeta = {
+    theme: activeTheme,
+    mascotName: activeMascotName,
+    mascotUrl: activeMascotUrl,
+    mascotRole: activeMascotRole,
+    accentColor: themeConfig.accentColor,
+  };
+
+  const rawResponse = await (async (): Promise<ChatResponse> => {
+
+  // 2. Direct Event-Grounded Context Answers (when viewing a specific event)
+  if (activeEvent) {
+    // 2A. "What is this event about?" / Overview
+    if (
+      query.includes("about") ||
+      query.includes("what is this") ||
+      query.includes("tell me about") ||
+      query.includes("overview") ||
+      query.includes("description")
+    ) {
+      const isPaid = (activeEvent.price || 0) > 0;
+      const priceBadge = isPaid ? `₹${activeEvent.price}` : "Free Pass (₹0)";
+      const startStr = new Date(activeEvent.startTime).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      return {
+        ...baseThemeMeta,
+        message: `**${activeEvent.title}** (${activeEvent.category})\n\n${activeEvent.description || "Official campus event hosted on EventHub."}\n\n📍 **Venue:** ${activeEvent.venue}\n🕒 **Starts:** ${startStr}\n🎟️ **Ticket Price:** ${priceBadge}\n👥 **Capacity:** ${activeEvent.capacity || 200} attendees`,
+        actions: [
+          {
+            label: `Register for ${activeEvent.title}`,
+            url: `/events/${activeEvent.id}`,
+            type: "link",
+          },
+        ],
+        suggestedFollowUps: [
+          "How much does it cost?",
+          "Where is it?",
+          "When is it?",
+          "How do I register?",
+        ],
+      };
+    }
+
+    // 2B. "How much does it cost?" / Fee / Payment
+    if (
+      query.includes("cost") ||
+      query.includes("price") ||
+      query.includes("fee") ||
+      query.includes("pay") ||
+      query.includes("how much") ||
+      query.includes("ticket")
+    ) {
+      const isPaid = (activeEvent.price || 0) > 0;
+      const costText = isPaid
+        ? `Registration for **${activeEvent.title}** is **₹${activeEvent.price}**.\n\nPayments are processed securely via the integrated Razorpay payment gateway (UPI, Credit/Debit Card, NetBanking). Upon payment verification, your verified digital QR pass will be issued immediately.`
+        : `Registration for **${activeEvent.title}** is **100% Free** (₹0 entry fee) for all registered university students! You will receive a confirmed gate QR pass immediately upon 1-click registration.`;
+
+      return {
+        ...baseThemeMeta,
+        message: costText,
+        actions: [
+          {
+            label: isPaid ? `Register & Pay ₹${activeEvent.price}` : "Get Free Pass",
+            url: `/events/${activeEvent.id}`,
+            type: "link",
+          },
+        ],
+        suggestedFollowUps: [
+          "Where is it located?",
+          "When is it?",
+          "How do I register?",
+        ],
+      };
+    }
+
+    // 2C. "Where is it?" / Location / Venue
+    if (
+      query.includes("where") ||
+      query.includes("location") ||
+      query.includes("venue") ||
+      query.includes("place")
+    ) {
+      return {
+        ...baseThemeMeta,
+        message: `**${activeEvent.title}** is held at:\n\n📍 **${activeEvent.venue}**\n\n📌 *Campus Tip:* Arrive 15 minutes prior to the start time and keep your digital QR ticket pass open on your smartphone for rapid gate verification.`,
+        actions: [
+          {
+            label: `View Event on Map / Details`,
+            url: `/events/${activeEvent.id}`,
+            type: "link",
+          },
+        ],
+        suggestedFollowUps: [
+          "When is it?",
+          "How much does it cost?",
+          "How do I register?",
+        ],
+      };
+    }
+
+    // 2D. "When is it?" / Time / Schedule
+    if (
+      query.includes("when") ||
+      query.includes("date") ||
+      query.includes("time") ||
+      query.includes("schedule") ||
+      query.includes("timing")
+    ) {
+      const startDate = new Date(activeEvent.startTime).toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+      const startTime = new Date(activeEvent.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const endTime = new Date(activeEvent.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+      return {
+        ...baseThemeMeta,
+        message: `Schedule for **${activeEvent.title}**:\n\n📅 **Date:** ${startDate}\n⏰ **Timing:** ${startTime} – ${endTime}\n📍 **Venue:** ${activeEvent.venue}`,
+        actions: [
+          {
+            label: `View Full Agenda & Register`,
+            url: `/events/${activeEvent.id}`,
+            type: "link",
+          },
+        ],
+        suggestedFollowUps: [
+          "Where is it?",
+          "How much does it cost?",
+          "How do I register?",
+        ],
+      };
+    }
+
+    // 2E. "How do I register?" / Sign Up
+    if (
+      query.includes("how do i register") ||
+      query.includes("register") ||
+      query.includes("sign up") ||
+      query.includes("enroll") ||
+      query.includes("join")
+    ) {
+      const isPaid = (activeEvent.price || 0) > 0;
+      return {
+        ...baseThemeMeta,
+        message: `**How to Register for ${activeEvent.title}:**\n\n1. Open the [${activeEvent.title}](/events/${activeEvent.id}) page.\n2. Click **${isPaid ? `Register & Pay ₹${activeEvent.price}` : "Register For Free Pass"}**.\n3. ${isPaid ? "Complete the verified Razorpay payment modal." : "Confirm your student details."}\n4. Your cryptographic QR entry ticket will be generated instantly in your Attendee Dashboard!`,
+        actions: [
+          {
+            label: isPaid ? `Register & Pay ₹${activeEvent.price}` : "Register For Free Pass",
+            url: `/events/${activeEvent.id}`,
+            type: "link",
+          },
+        ],
+        suggestedFollowUps: [
+          "How much does it cost?",
+          "Is registration still open?",
+          "Where is the venue?",
+        ],
+      };
+    }
+
+    // 2F. "Is registration still open?" / Capacity / Seats
+    if (
+      query.includes("still open") ||
+      query.includes("seats") ||
+      query.includes("capacity") ||
+      query.includes("available") ||
+      query.includes("sold out") ||
+      query.includes("deadline")
+    ) {
+      const cap = activeEvent.capacity || 200;
+      const regCount = activeEvent.registeredCount || 0;
+      const remaining = Math.max(0, cap - regCount);
+      const isAvailable = remaining > 0;
+
+      return {
+        ...baseThemeMeta,
+        message: isAvailable
+          ? `Yes! Registration for **${activeEvent.title}** is currently **OPEN**.\n\n🎟️ **Available Seats:** ${remaining} of ${cap} seats remaining\n📊 **Current Registrations:** ${regCount} attendees registered`
+          : `Registration for **${activeEvent.title}** is currently at full capacity (${cap} seats filled).`,
+        actions: [
+          {
+            label: isAvailable ? `Register Now (${remaining} Seats Left)` : "Browse Other Events",
+            url: isAvailable ? `/events/${activeEvent.id}` : "/events",
+            type: "link",
+          },
+        ],
+        suggestedFollowUps: [
+          "How much does it cost?",
+          "Where is it?",
+          "How do I register?",
+        ],
+      };
+    }
+  }
 
   // 1. Check for User Registrations & Tickets
   if (
@@ -543,5 +784,11 @@ export async function processAttendeeChatMessage(
         type: "link",
       },
     ],
+  };
+})();
+
+  return {
+    ...baseThemeMeta,
+    ...rawResponse,
   };
 }

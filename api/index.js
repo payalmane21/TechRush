@@ -89930,6 +89930,199 @@ var import_express11 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
 init_store();
+
+// src/lib/chatbot-themes.ts
+var DEFAULT_NOVA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="novaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#581c87" />
+      <stop offset="50%" stop-color="#801b3b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+    <linearGradient id="sparkGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f43f5e" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="40" fill="url(#novaBg)" />
+  <circle cx="100" cy="100" r="72" fill="none" stroke="url(#sparkGlow)" stroke-width="2.5" stroke-dasharray="6 4" opacity="0.7" />
+  <path d="M 65 60 Q 100 45 135 60 Q 140 115 100 145 Q 60 115 65 60 Z" fill="#ffffff" />
+  <path d="M 72 68 Q 100 55 128 68 Q 132 110 100 136 Q 68 110 72 68 Z" fill="#801b3b" />
+  <ellipse cx="86" cy="85" rx="5" ry="6" fill="#ffffff" />
+  <circle cx="87" cy="84" r="2.5" fill="#1e1b4b" />
+  <ellipse cx="114" cy="85" rx="5" ry="6" fill="#ffffff" />
+  <circle cx="115" cy="84" r="2.5" fill="#1e1b4b" />
+  <path d="M 92 100 Q 100 108 108 100" stroke="#fde047" stroke-width="3" fill="none" stroke-linecap="round" />
+  <polygon points="100,42 125,52 100,62 75,52" fill="#1e1b4b" />
+  <polygon points="100,44 121,52 100,60 79,52" fill="#d97706" />
+  <line x1="125" y1="52" x2="128" y2="68" stroke="#fbbf24" stroke-width="2" />
+  <circle cx="128" cy="69" r="3" fill="#fbbf24" />
+  <polygon points="100,15 103,24 112,27 103,30 100,39 97,30 88,27 97,24" fill="#fbbf24" />
+</svg>`;
+var TECH_OWL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="techBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#311042" />
+    </linearGradient>
+    <linearGradient id="neonGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="goldFeather" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="40" fill="url(#techBg)" />
+  <circle cx="100" cy="100" r="75" fill="none" stroke="url(#neonGlow)" stroke-width="3" stroke-dasharray="8 6" opacity="0.6" />
+  <path d="M 60 130 C 60 70, 140 70, 140 130 C 140 165, 60 165, 60 130 Z" fill="url(#goldFeather)" />
+  <polygon points="65,75 78,50 90,75" fill="#38bdf8" />
+  <polygon points="135,75 122,50 110,75" fill="#8b5cf6" />
+  <rect x="58" y="85" width="84" height="28" rx="14" fill="#030712" stroke="url(#neonGlow)" stroke-width="3" />
+  <circle cx="80" cy="99" r="8" fill="#06b6d4" />
+  <circle cx="120" cy="99" r="8" fill="#ec4899" />
+  <line x1="72" y1="99" x2="128" y2="99" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="3 3" />
+  <polygon points="100,116 93,126 107,126" fill="#f59e0b" />
+</svg>`;
+var CULTURAL_FOX_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cultBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a044e" />
+      <stop offset="50%" stop-color="#831843" />
+      <stop offset="100%" stop-color="#f43f5e" />
+    </linearGradient>
+    <linearGradient id="foxFur" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="40" fill="url(#cultBg)" />
+  <circle cx="100" cy="100" r="75" fill="none" stroke="#f472b6" stroke-width="3" stroke-dasharray="6 4" opacity="0.5" />
+  <polygon points="60,80 50,45 85,65" fill="#ea580c" />
+  <polygon points="65,75 58,55 80,68" fill="#fed7aa" />
+  <polygon points="140,80 150,45 115,65" fill="#ea580c" />
+  <polygon points="135,75 142,55 120,68" fill="#fed7aa" />
+  <path d="M 60 90 Q 100 65 140 90 Q 145 135 100 155 Q 55 135 60 90 Z" fill="url(#foxFur)" />
+  <ellipse cx="80" cy="105" rx="6" ry="8" fill="#1e1b4b" />
+  <circle cx="82" cy="103" r="2.5" fill="#ffffff" />
+  <ellipse cx="120" cy="105" rx="6" ry="8" fill="#1e1b4b" />
+  <circle cx="122" cy="103" r="2.5" fill="#ffffff" />
+  <polygon points="100,126 95,120 105,120" fill="#1e1b4b" />
+</svg>`;
+var SPORTS_PANTHER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sportsBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14532d" />
+      <stop offset="50%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="pantherGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="40" fill="url(#sportsBg)" />
+  <path d="M 60 85 C 55 55, 145 55, 140 85 C 145 135, 55 135, 60 85 Z" fill="url(#pantherGold)" />
+  <polygon points="62,65 52,40 75,55" fill="#b45309" />
+  <polygon points="138,65 148,40 125,55" fill="#b45309" />
+  <polygon points="75,90 90,92 78,98" fill="#1e1b4b" />
+  <polygon points="125,90 110,92 122,98" fill="#1e1b4b" />
+</svg>`;
+var SERVER_CHATBOT_THEMES = {
+  TECH: {
+    category: "TECH",
+    displayName: "Technology & Innovation",
+    badgeLabel: "TECH ASSISTANT",
+    assistantName: "Byte the Cyber Owl",
+    greetingSubtitle: "AI & Hackathon Concierge",
+    accentColor: "#6366f1",
+    mascotSvg: TECH_OWL_SVG
+  },
+  CULTURAL: {
+    category: "CULTURAL",
+    displayName: "Cultural & Performing Arts",
+    badgeLabel: "CULTURAL ASSISTANT",
+    assistantName: "Aria the Melody Fox",
+    greetingSubtitle: "Arts & Celebration Concierge",
+    accentColor: "#ec4899",
+    mascotSvg: CULTURAL_FOX_SVG
+  },
+  SPORTS: {
+    category: "SPORTS",
+    displayName: "Sports & Athletics",
+    badgeLabel: "SPORTS ASSISTANT",
+    assistantName: "Bolt the Lightning Panther",
+    greetingSubtitle: "Athletics & Tournament Concierge",
+    accentColor: "#eab308",
+    mascotSvg: SPORTS_PANTHER_SVG
+  },
+  ACADEMIC: {
+    category: "ACADEMIC",
+    displayName: "Academic & Science Labs",
+    badgeLabel: "ACADEMIC ASSISTANT",
+    assistantName: "Atom the Discovery Otter",
+    greetingSubtitle: "Research & Workshop Concierge",
+    accentColor: "#10b981",
+    mascotSvg: DEFAULT_NOVA_SVG
+  },
+  BUSINESS: {
+    category: "BUSINESS",
+    displayName: "Business & Leadership",
+    badgeLabel: "EXECUTIVE ASSISTANT",
+    assistantName: "Apex the Visionary Falcon",
+    greetingSubtitle: "Summit & Pitch Deck Concierge",
+    accentColor: "#0284c7",
+    mascotSvg: DEFAULT_NOVA_SVG
+  },
+  ENTERTAINMENT: {
+    category: "ENTERTAINMENT",
+    displayName: "Entertainment & Fest",
+    badgeLabel: "FEST ASSISTANT",
+    assistantName: "Aria the Melody Fox",
+    greetingSubtitle: "Campus Fest Concierge",
+    accentColor: "#a855f7",
+    mascotSvg: CULTURAL_FOX_SVG
+  },
+  GENERAL: {
+    category: "GENERAL",
+    displayName: "Campus Events Concierge",
+    badgeLabel: "CAMPUS ASSISTANT",
+    assistantName: "Nova the Campus Spark",
+    greetingSubtitle: "Official EventHub Concierge",
+    accentColor: "#801b3b",
+    mascotSvg: DEFAULT_NOVA_SVG
+  }
+};
+function resolveServerThemeCategory(category, title) {
+  const cat = (category || "").toLowerCase();
+  const t = (title || "").toLowerCase();
+  if (cat.includes("tech") || cat.includes("code") || cat.includes("hack") || t.includes("tech") || t.includes("hackathon") || t.includes("ai") || t.includes("robot")) {
+    return "TECH";
+  }
+  if (cat.includes("sport") || cat.includes("athletic") || cat.includes("fitness") || t.includes("sports") || t.includes("cricket") || t.includes("football") || t.includes("tournament")) {
+    return "SPORTS";
+  }
+  if (cat.includes("cultur") || cat.includes("art") || cat.includes("music") || cat.includes("dance") || t.includes("music") || t.includes("dance") || t.includes("gala")) {
+    return "CULTURAL";
+  }
+  if (cat.includes("acad") || cat.includes("sci") || cat.includes("research") || t.includes("workshop") || t.includes("seminar") || t.includes("science")) {
+    return "ACADEMIC";
+  }
+  if (cat.includes("busin") || cat.includes("entrepreneur") || cat.includes("lead") || t.includes("startup") || t.includes("pitch") || t.includes("summit")) {
+    return "BUSINESS";
+  }
+  if (cat.includes("entertain") || cat.includes("fest") || cat.includes("social") || t.includes("fest")) {
+    return "ENTERTAINMENT";
+  }
+  return "GENERAL";
+}
+function serverSvgToDataUri(svg) {
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+// src/lib/ai-assistant.ts
 async function searchPublishedEvents(params) {
   let events = [];
   try {
@@ -90015,69 +90208,260 @@ async function getAttendeePayments(userId) {
     return true;
   });
 }
-async function processAttendeeChatMessage(message, userId, userName) {
+async function processAttendeeChatMessage(message, userId, userName, eventId) {
   const query = message.trim().toLowerCase();
-  if (query.includes("my registration") || query.includes("my ticket") || query.includes("my pass") || query.includes("registered for") || query.includes("am i registered") || query.includes("my upcoming") || query.includes("show my events")) {
-    const myRegs = await getAttendeeRegistrations(userId);
-    if (myRegs.length === 0) {
-      const publishedEvents = await searchPublishedEvents({});
-      const top3 = publishedEvents.slice(0, 3);
-      return {
-        message: `Hello **${userName}**! You currently do not have any active event registrations in EventHub.
+  let activeEvent = null;
+  let activeTheme = "GENERAL";
+  let themeConfig = SERVER_CHATBOT_THEMES.GENERAL;
+  let activeMascotUrl = serverSvgToDataUri(themeConfig.mascotSvg);
+  let activeMascotName = themeConfig.assistantName;
+  let activeMascotRole = "Official EventHub Concierge";
+  if (eventId && !isNaN(Number(eventId))) {
+    try {
+      const [dbEvent] = await db.select().from(eventsTable).where(eq(eventsTable.id, Number(eventId))).limit(1);
+      activeEvent = dbEvent;
+    } catch {
+    }
+    if (!activeEvent) {
+      activeEvent = globalEvents.find((e) => e.id === Number(eventId));
+    }
+    if (activeEvent) {
+      activeTheme = resolveServerThemeCategory(activeEvent.category, activeEvent.title);
+      themeConfig = SERVER_CHATBOT_THEMES[activeTheme] || SERVER_CHATBOT_THEMES.GENERAL;
+      activeMascotUrl = activeEvent.mascotUrl || serverSvgToDataUri(themeConfig.mascotSvg);
+      activeMascotName = activeEvent.mascotUrl ? `${activeEvent.title} Mascot` : themeConfig.assistantName;
+      activeMascotRole = `${activeEvent.title} Assistant`;
+    }
+  }
+  const baseThemeMeta = {
+    theme: activeTheme,
+    mascotName: activeMascotName,
+    mascotUrl: activeMascotUrl,
+    mascotRole: activeMascotRole,
+    accentColor: themeConfig.accentColor
+  };
+  const rawResponse = await (async () => {
+    if (activeEvent) {
+      if (query.includes("about") || query.includes("what is this") || query.includes("tell me about") || query.includes("overview") || query.includes("description")) {
+        const isPaid = (activeEvent.price || 0) > 0;
+        const priceBadge = isPaid ? `\u20B9${activeEvent.price}` : "Free Pass (\u20B90)";
+        const startStr = new Date(activeEvent.startTime).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        return {
+          ...baseThemeMeta,
+          message: `**${activeEvent.title}** (${activeEvent.category})
+
+${activeEvent.description || "Official campus event hosted on EventHub."}
+
+\u{1F4CD} **Venue:** ${activeEvent.venue}
+\u{1F552} **Starts:** ${startStr}
+\u{1F39F}\uFE0F **Ticket Price:** ${priceBadge}
+\u{1F465} **Capacity:** ${activeEvent.capacity || 200} attendees`,
+          actions: [
+            {
+              label: `Register for ${activeEvent.title}`,
+              url: `/events/${activeEvent.id}`,
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "How much does it cost?",
+            "Where is it?",
+            "When is it?",
+            "How do I register?"
+          ]
+        };
+      }
+      if (query.includes("cost") || query.includes("price") || query.includes("fee") || query.includes("pay") || query.includes("how much") || query.includes("ticket")) {
+        const isPaid = (activeEvent.price || 0) > 0;
+        const costText = isPaid ? `Registration for **${activeEvent.title}** is **\u20B9${activeEvent.price}**.
+
+Payments are processed securely via the integrated Razorpay payment gateway (UPI, Credit/Debit Card, NetBanking). Upon payment verification, your verified digital QR pass will be issued immediately.` : `Registration for **${activeEvent.title}** is **100% Free** (\u20B90 entry fee) for all registered university students! You will receive a confirmed gate QR pass immediately upon 1-click registration.`;
+        return {
+          ...baseThemeMeta,
+          message: costText,
+          actions: [
+            {
+              label: isPaid ? `Register & Pay \u20B9${activeEvent.price}` : "Get Free Pass",
+              url: `/events/${activeEvent.id}`,
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "Where is it located?",
+            "When is it?",
+            "How do I register?"
+          ]
+        };
+      }
+      if (query.includes("where") || query.includes("location") || query.includes("venue") || query.includes("place")) {
+        return {
+          ...baseThemeMeta,
+          message: `**${activeEvent.title}** is held at:
+
+\u{1F4CD} **${activeEvent.venue}**
+
+\u{1F4CC} *Campus Tip:* Arrive 15 minutes prior to the start time and keep your digital QR ticket pass open on your smartphone for rapid gate verification.`,
+          actions: [
+            {
+              label: `View Event on Map / Details`,
+              url: `/events/${activeEvent.id}`,
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "When is it?",
+            "How much does it cost?",
+            "How do I register?"
+          ]
+        };
+      }
+      if (query.includes("when") || query.includes("date") || query.includes("time") || query.includes("schedule") || query.includes("timing")) {
+        const startDate = new Date(activeEvent.startTime).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric"
+        });
+        const startTime = new Date(activeEvent.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const endTime = new Date(activeEvent.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        return {
+          ...baseThemeMeta,
+          message: `Schedule for **${activeEvent.title}**:
+
+\u{1F4C5} **Date:** ${startDate}
+\u23F0 **Timing:** ${startTime} \u2013 ${endTime}
+\u{1F4CD} **Venue:** ${activeEvent.venue}`,
+          actions: [
+            {
+              label: `View Full Agenda & Register`,
+              url: `/events/${activeEvent.id}`,
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "Where is it?",
+            "How much does it cost?",
+            "How do I register?"
+          ]
+        };
+      }
+      if (query.includes("how do i register") || query.includes("register") || query.includes("sign up") || query.includes("enroll") || query.includes("join")) {
+        const isPaid = (activeEvent.price || 0) > 0;
+        return {
+          ...baseThemeMeta,
+          message: `**How to Register for ${activeEvent.title}:**
+
+1. Open the [${activeEvent.title}](/events/${activeEvent.id}) page.
+2. Click **${isPaid ? `Register & Pay \u20B9${activeEvent.price}` : "Register For Free Pass"}**.
+3. ${isPaid ? "Complete the verified Razorpay payment modal." : "Confirm your student details."}
+4. Your cryptographic QR entry ticket will be generated instantly in your Attendee Dashboard!`,
+          actions: [
+            {
+              label: isPaid ? `Register & Pay \u20B9${activeEvent.price}` : "Register For Free Pass",
+              url: `/events/${activeEvent.id}`,
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "How much does it cost?",
+            "Is registration still open?",
+            "Where is the venue?"
+          ]
+        };
+      }
+      if (query.includes("still open") || query.includes("seats") || query.includes("capacity") || query.includes("available") || query.includes("sold out") || query.includes("deadline")) {
+        const cap = activeEvent.capacity || 200;
+        const regCount = activeEvent.registeredCount || 0;
+        const remaining = Math.max(0, cap - regCount);
+        const isAvailable = remaining > 0;
+        return {
+          ...baseThemeMeta,
+          message: isAvailable ? `Yes! Registration for **${activeEvent.title}** is currently **OPEN**.
+
+\u{1F39F}\uFE0F **Available Seats:** ${remaining} of ${cap} seats remaining
+\u{1F4CA} **Current Registrations:** ${regCount} attendees registered` : `Registration for **${activeEvent.title}** is currently at full capacity (${cap} seats filled).`,
+          actions: [
+            {
+              label: isAvailable ? `Register Now (${remaining} Seats Left)` : "Browse Other Events",
+              url: isAvailable ? `/events/${activeEvent.id}` : "/events",
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "How much does it cost?",
+            "Where is it?",
+            "How do I register?"
+          ]
+        };
+      }
+    }
+    if (query.includes("my registration") || query.includes("my ticket") || query.includes("my pass") || query.includes("registered for") || query.includes("am i registered") || query.includes("my upcoming") || query.includes("show my events")) {
+      const myRegs = await getAttendeeRegistrations(userId);
+      if (myRegs.length === 0) {
+        const publishedEvents = await searchPublishedEvents({});
+        const top3 = publishedEvents.slice(0, 3);
+        return {
+          message: `Hello **${userName}**! You currently do not have any active event registrations in EventHub.
 
 Here are some popular live campus events you can register for:`,
-        actions: top3.map((e) => ({
-          label: `Register for ${e.title} (\u20B9${e.price || 0})`,
-          url: `/events/${e.id}`,
-          type: "link"
-        })),
-        suggestedFollowUps: [
-          "Which events are free?",
-          "What events are happening this week?",
-          "How do I register for an event?"
-        ]
-      };
-    }
-    const regListMarkdown = myRegs.map((r, idx) => {
-      const dateStr = r.eventStartTime ? new Date(r.eventStartTime).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Scheduled";
-      const feeBadge = (r.amountPaid || 0) > 0 ? `Paid Pass (\u20B9${r.amountPaid})` : "Free Pass";
-      const statusBadge = r.checkedInAt ? "\u2705 Checked In at Gate" : "\u{1F39F}\uFE0F Confirmed \u2014 Ready for Gate Scan";
-      return `${idx + 1}. **${r.eventTitle}**
+          actions: top3.map((e) => ({
+            label: `Register for ${e.title} (\u20B9${e.price || 0})`,
+            url: `/events/${e.id}`,
+            type: "link"
+          })),
+          suggestedFollowUps: [
+            "Which events are free?",
+            "What events are happening this week?",
+            "How do I register for an event?"
+          ]
+        };
+      }
+      const regListMarkdown = myRegs.map((r, idx) => {
+        const dateStr = r.eventStartTime ? new Date(r.eventStartTime).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Scheduled";
+        const feeBadge = (r.amountPaid || 0) > 0 ? `Paid Pass (\u20B9${r.amountPaid})` : "Free Pass";
+        const statusBadge = r.checkedInAt ? "\u2705 Checked In at Gate" : "\u{1F39F}\uFE0F Confirmed \u2014 Ready for Gate Scan";
+        return `${idx + 1}. **${r.eventTitle}**
    - **Venue:** ${r.eventVenue}
    - **Date & Time:** ${dateStr}
    - **Status:** ${statusBadge} \u2022 ${feeBadge}
    - **Registration ID:** \`REG-${r.id}\``;
-    }).join("\n\n");
-    return {
-      message: `Here are your confirmed event registrations, **${userName}**:
+      }).join("\n\n");
+      return {
+        message: `Here are your confirmed event registrations, **${userName}**:
 
 ${regListMarkdown}
 
 You can access your verified cryptographic QR passes anytime from your Attendee Dashboard or Profile.`,
-      actions: [
-        {
-          label: "\u{1F39F}\uFE0F View My QR Passes",
-          url: "/dashboard/attendee",
-          type: "link"
-        },
-        {
-          label: "\u{1F4B3} View Payment Receipts",
-          url: "/dashboard/profile",
-          type: "link"
-        }
-      ],
-      suggestedFollowUps: [
-        "Where is my QR pass?",
-        "How do I check in at the gate?",
-        "Find more upcoming events"
-      ]
-    };
-  }
-  if (query.includes("qr") || query.includes("gate") || query.includes("barcode") || query.includes("entry pass") || query.includes("scan")) {
-    const myRegs = await getAttendeeRegistrations(userId);
-    if (myRegs.length > 0) {
-      return {
-        message: `Your cryptographic QR passes are generated and ready for check-in! \u{1F3AB}
+        actions: [
+          {
+            label: "\u{1F39F}\uFE0F View My QR Passes",
+            url: "/dashboard/attendee",
+            type: "link"
+          },
+          {
+            label: "\u{1F4B3} View Payment Receipts",
+            url: "/dashboard/profile",
+            type: "link"
+          }
+        ],
+        suggestedFollowUps: [
+          "Where is my QR pass?",
+          "How do I check in at the gate?",
+          "Find more upcoming events"
+        ]
+      };
+    }
+    if (query.includes("qr") || query.includes("gate") || query.includes("barcode") || query.includes("entry pass") || query.includes("scan")) {
+      const myRegs = await getAttendeeRegistrations(userId);
+      if (myRegs.length > 0) {
+        return {
+          message: `Your cryptographic QR passes are generated and ready for check-in! \u{1F3AB}
 
 **How to use your QR Pass:**
 1. Open your **Attendee Dashboard** or **Profile**.
@@ -90085,67 +90469,67 @@ You can access your verified cryptographic QR passes anytime from your Attendee 
 3. Present the QR code on your phone to the Student Volunteer desk at the entrance gate for instant validation.
 
 *Note: Each QR pass contains a cryptographically signed HMAC token for fraud prevention.*`,
-        actions: [
-          {
-            label: "Open My QR Passes",
-            url: "/dashboard/attendee",
-            type: "link"
-          }
-        ],
-        suggestedFollowUps: [
-          "Show my registrations",
-          "Is my payment confirmed?",
-          "What happens if I arrive late?"
-        ]
-      };
-    } else {
-      return {
-        message: `You haven't registered for any events yet, so no QR passes have been generated for your account. Once you complete registration for any free or paid campus event, a verified cryptographic QR pass will appear instantly on your dashboard!`,
-        actions: [
-          {
-            label: "Open My Dashboard",
-            url: "/dashboard/attendee",
-            type: "link"
-          },
-          {
-            label: "Browse Available Events",
-            url: "/events",
-            type: "link"
-          }
-        ],
-        suggestedFollowUps: [
-          "Which events are free?",
-          "How do I register for an event?"
-        ]
-      };
+          actions: [
+            {
+              label: "Open My QR Passes",
+              url: "/dashboard/attendee",
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "Show my registrations",
+            "Is my payment confirmed?",
+            "What happens if I arrive late?"
+          ]
+        };
+      } else {
+        return {
+          message: `You haven't registered for any events yet, so no QR passes have been generated for your account. Once you complete registration for any free or paid campus event, a verified cryptographic QR pass will appear instantly on your dashboard!`,
+          actions: [
+            {
+              label: "Open My Dashboard",
+              url: "/dashboard/attendee",
+              type: "link"
+            },
+            {
+              label: "Browse Available Events",
+              url: "/events",
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "Which events are free?",
+            "How do I register for an event?"
+          ]
+        };
+      }
     }
-  }
-  if (query.includes("payment") || query.includes("paid") || query.includes("fee") || query.includes("razorpay") || query.includes("receipt") || query.includes("refund") || query.includes("price") || query.includes("cost")) {
-    if (query.includes("free")) {
-      const freeEvents = await searchPublishedEvents({ isFree: true });
-      const freeList = freeEvents.slice(0, 5).map((e) => `\u2022 **${e.title}** (${e.category}) \u2014 Venue: ${e.venue}`).join("\n");
-      return {
-        message: `EventHub features **${freeEvents.length} Free Campus Events** with \u20B90 registration fee:
+    if (query.includes("payment") || query.includes("paid") || query.includes("fee") || query.includes("razorpay") || query.includes("receipt") || query.includes("refund") || query.includes("price") || query.includes("cost")) {
+      if (query.includes("free")) {
+        const freeEvents = await searchPublishedEvents({ isFree: true });
+        const freeList = freeEvents.slice(0, 5).map((e) => `\u2022 **${e.title}** (${e.category}) \u2014 Venue: ${e.venue}`).join("\n");
+        return {
+          message: `EventHub features **${freeEvents.length} Free Campus Events** with \u20B90 registration fee:
 
 ${freeList || "No free events currently scheduled."}
 
 Free events grant instant confirmed QR passes upon one-click registration.`,
-        actions: freeEvents.slice(0, 2).map((e) => ({
-          label: `Register for ${e.title}`,
-          url: `/events/${e.id}`,
-          type: "link"
-        })),
-        suggestedFollowUps: [
-          "What events require payment?",
-          "Show my registrations"
-        ]
-      };
-    }
-    if (query.includes("require payment") || query.includes("paid event")) {
-      const paidEvents = await searchPublishedEvents({ isPaid: true });
-      const paidList = paidEvents.slice(0, 5).map((e) => `\u2022 **${e.title}** \u2014 **\u20B9${e.price}** (${e.category}) \u2022 Venue: ${e.venue}`).join("\n");
-      return {
-        message: `Here are the active **Paid Events** available on EventHub:
+          actions: freeEvents.slice(0, 2).map((e) => ({
+            label: `Register for ${e.title}`,
+            url: `/events/${e.id}`,
+            type: "link"
+          })),
+          suggestedFollowUps: [
+            "What events require payment?",
+            "Show my registrations"
+          ]
+        };
+      }
+      if (query.includes("require payment") || query.includes("paid event")) {
+        const paidEvents = await searchPublishedEvents({ isPaid: true });
+        const paidList = paidEvents.slice(0, 5).map((e) => `\u2022 **${e.title}** \u2014 **\u20B9${e.price}** (${e.category}) \u2022 Venue: ${e.venue}`).join("\n");
+        return {
+          message: `Here are the active **Paid Events** available on EventHub:
 
 ${paidList || "All current events are free of charge."}
 
@@ -90154,58 +90538,58 @@ ${paidList || "All current events are free of charge."}
 2. The secure **Razorpay Payment Gateway** modal opens.
 3. Complete payment via UPI, Credit/Debit Card, or NetBanking.
 4. Server verifies HMAC-SHA256 signature and issues your signed QR Pass immediately.`,
-        actions: paidEvents.slice(0, 2).map((e) => ({
-          label: `View ${e.title} (\u20B9${e.price})`,
-          url: `/events/${e.id}`,
-          type: "link"
-        })),
-        suggestedFollowUps: [
-          "Show my payment history",
-          "Which events are free?"
-        ]
-      };
-    }
-    const myPayments = await getAttendeePayments(userId);
-    if (myPayments.length > 0) {
-      const payList = myPayments.slice(0, 4).map((p) => `\u2022 **Order:** \`${p.orderId}\` \u2014 **\u20B9${p.amount}** (${p.status.toUpperCase()})`).join("\n");
-      return {
-        message: `Here is your recent payment summary, **${userName}**:
+          actions: paidEvents.slice(0, 2).map((e) => ({
+            label: `View ${e.title} (\u20B9${e.price})`,
+            url: `/events/${e.id}`,
+            type: "link"
+          })),
+          suggestedFollowUps: [
+            "Show my payment history",
+            "Which events are free?"
+          ]
+        };
+      }
+      const myPayments = await getAttendeePayments(userId);
+      if (myPayments.length > 0) {
+        const payList = myPayments.slice(0, 4).map((p) => `\u2022 **Order:** \`${p.orderId}\` \u2014 **\u20B9${p.amount}** (${p.status.toUpperCase()})`).join("\n");
+        return {
+          message: `Here is your recent payment summary, **${userName}**:
 
 ${payList}
 
 All verified transactions are permanently recorded in the University Budget Ledger.`,
-        actions: [
-          {
-            label: "\u{1F4B3} View Full Payment Ledger",
-            url: "/dashboard/profile",
-            type: "link"
-          }
-        ],
-        suggestedFollowUps: [
-          "Show my QR pass",
-          "Show my registrations"
-        ]
-      };
-    } else {
-      return {
-        message: `You do not have any recorded paid transactions. When you register for paid workshops or hackathons, payments are processed securely through **Razorpay** with automated cryptographic verification and digital receipts.`,
-        actions: [
-          {
-            label: "Explore Paid Masterclasses",
-            url: "/events",
-            type: "link"
-          }
-        ],
-        suggestedFollowUps: [
-          "Which events are free?",
-          "How do I register for an event?"
-        ]
-      };
+          actions: [
+            {
+              label: "\u{1F4B3} View Full Payment Ledger",
+              url: "/dashboard/profile",
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "Show my QR pass",
+            "Show my registrations"
+          ]
+        };
+      } else {
+        return {
+          message: `You do not have any recorded paid transactions. When you register for paid workshops or hackathons, payments are processed securely through **Razorpay** with automated cryptographic verification and digital receipts.`,
+          actions: [
+            {
+              label: "Explore Paid Masterclasses",
+              url: "/events",
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "Which events are free?",
+            "How do I register for an event?"
+          ]
+        };
+      }
     }
-  }
-  if (query.includes("how to register") || query.includes("how do i register") || query.includes("registration process") || query.includes("how does registration work")) {
-    return {
-      message: `Registering for an event on EventHub is simple and takes less than a minute! \u{1F680}
+    if (query.includes("how to register") || query.includes("how do i register") || query.includes("registration process") || query.includes("how does registration work")) {
+      return {
+        message: `Registering for an event on EventHub is simple and takes less than a minute! \u{1F680}
 
 **Step-by-step Guide:**
 1. **Browse Events:** Find an event you want to attend in the [Events Catalog](/events).
@@ -90216,161 +90600,166 @@ All verified transactions are permanently recorded in the University Budget Ledg
    - If the event is **PAID (> \u20B90)**, the Razorpay gateway will prompt you to complete the payment.
 5. **Get Your QR Pass:** Your cryptographically signed QR ticket is issued instantly and saved to your Attendee Dashboard.
 6. **Gate Check-in:** Show your QR code to the volunteer desk on event day for quick entry!`,
+        actions: [
+          {
+            label: "Browse Events Catalog",
+            url: "/events",
+            type: "link"
+          }
+        ],
+        suggestedFollowUps: [
+          "Which events are free?",
+          "Show my registrations",
+          "Where can I find my QR pass?"
+        ]
+      };
+    }
+    if (query.includes("venue") || query.includes("location") || query.includes("where is") || query.includes("hall") || query.includes("auditorium") || query.includes("block") || query.includes("campus")) {
+      const myRegs = await getAttendeeRegistrations(userId);
+      if (myRegs.length > 0) {
+        const venues = myRegs.map((r) => `\u2022 **${r.eventTitle}**: ${r.eventVenue}`).join("\n");
+        return {
+          message: `Here are the venues for your registered events:
+
+${venues}
+
+Please arrive at least 15 minutes before start time with your student ID and QR pass ready.`,
+          actions: [
+            {
+              label: "Open My Registrations",
+              url: "/dashboard/attendee",
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "Show my QR pass",
+            "What events are happening this week?"
+          ]
+        };
+      } else {
+        const published = await searchPublishedEvents({});
+        const venues = published.slice(0, 4).map((e) => `\u2022 **${e.title}**: ${e.venue}`).join("\n");
+        return {
+          message: `Here are the campus venues for upcoming published events:
+
+${venues}`,
+          actions: [
+            {
+              label: "Browse All Events",
+              url: "/events",
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "Which events are free?",
+            "How do I register for an event?"
+          ]
+        };
+      }
+    }
+    const categories = ["technology", "cultural", "career", "sports", "seminar", "hackathon", "workshop", "arts"];
+    const matchedCategory = categories.find((c) => query.includes(c));
+    if (matchedCategory) {
+      const events = await searchPublishedEvents({ category: matchedCategory });
+      if (events.length === 0) {
+        return {
+          message: `Currently, there are no published events under the **${matchedCategory.toUpperCase()}** category. Please check back soon as campus organizers frequently publish new activities!`,
+          actions: [
+            {
+              label: "Browse All Events",
+              url: "/events",
+              type: "link"
+            }
+          ],
+          suggestedFollowUps: [
+            "Which events are free?",
+            "Show my registrations"
+          ]
+        };
+      }
+      const eventList = events.slice(0, 4).map((e) => {
+        const fee = (e.price || 0) > 0 ? `\u20B9${e.price}` : "FREE";
+        const dateStr = e.startTime ? new Date(e.startTime).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Scheduled";
+        return `\u2022 **${e.title}** \u2014 **${fee}**
+  Venue: ${e.venue} \u2022 Date: ${dateStr} \u2022 Capacity: ${e.capacity} seats`;
+      }).join("\n\n");
+      return {
+        message: `Found **${events.length}** event(s) in **${matchedCategory.toUpperCase()}**:
+
+${eventList}`,
+        actions: events.slice(0, 2).map((e) => ({
+          label: `View ${e.title}`,
+          url: `/events/${e.id}`,
+          type: "link"
+        })),
+        suggestedFollowUps: [
+          "Which events are free?",
+          "How do I register for an event?",
+          "Show my registrations"
+        ]
+      };
+    }
+    if (query.includes("event") || query.includes("available") || query.includes("upcoming") || query.includes("happening") || query.includes("find") || query.includes("what is going on") || query.includes("browse")) {
+      const published = await searchPublishedEvents({});
+      if (published.length === 0) {
+        return {
+          message: "There are currently no published events live on EventHub. Please check back soon!",
+          suggestedFollowUps: ["How do I register for an event?", "Where is my QR pass?"]
+        };
+      }
+      const list = published.slice(0, 5).map((e) => {
+        const fee = (e.price || 0) > 0 ? `\u20B9${e.price}` : "Free Pass";
+        const dateStr = e.startTime ? new Date(e.startTime).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Upcoming";
+        return `\u2022 **${e.title}** (${e.category})
+  *Date:* ${dateStr} | *Venue:* ${e.venue} | *Entry:* **${fee}**`;
+      }).join("\n\n");
+      return {
+        message: `Here are the upcoming **Published Campus Events** currently available for registration on EventHub:
+
+${list}`,
+        actions: [
+          {
+            label: "\u{1F50D} Explore All Events",
+            url: "/events",
+            type: "link"
+          }
+        ],
+        suggestedFollowUps: [
+          "Which events are free?",
+          "What events require payment?",
+          "Show my registrations"
+        ]
+      };
+    }
+    const defaultPublished = await searchPublishedEvents({});
+    return {
+      message: `Hello **${userName}**! I am your **EventHub AI Event Assistant**. I can help you discover campus events, manage your registrations, check your payment status, and find your gate QR passes.
+
+Here are some things you can ask me:`,
+      suggestedFollowUps: [
+        "What events are available?",
+        "Show my registrations",
+        "Which events are free?",
+        "Where is my QR pass?",
+        "How do I register for an event?"
+      ],
       actions: [
         {
           label: "Browse Events Catalog",
           url: "/events",
           type: "link"
-        }
-      ],
-      suggestedFollowUps: [
-        "Which events are free?",
-        "Show my registrations",
-        "Where can I find my QR pass?"
-      ]
-    };
-  }
-  if (query.includes("venue") || query.includes("location") || query.includes("where is") || query.includes("hall") || query.includes("auditorium") || query.includes("block") || query.includes("campus")) {
-    const myRegs = await getAttendeeRegistrations(userId);
-    if (myRegs.length > 0) {
-      const venues = myRegs.map((r) => `\u2022 **${r.eventTitle}**: ${r.eventVenue}`).join("\n");
-      return {
-        message: `Here are the venues for your registered events:
-
-${venues}
-
-Please arrive at least 15 minutes before start time with your student ID and QR pass ready.`,
-        actions: [
-          {
-            label: "Open My Registrations",
-            url: "/dashboard/attendee",
-            type: "link"
-          }
-        ],
-        suggestedFollowUps: [
-          "Show my QR pass",
-          "What events are happening this week?"
-        ]
-      };
-    } else {
-      const published = await searchPublishedEvents({});
-      const venues = published.slice(0, 4).map((e) => `\u2022 **${e.title}**: ${e.venue}`).join("\n");
-      return {
-        message: `Here are the campus venues for upcoming published events:
-
-${venues}`,
-        actions: [
-          {
-            label: "Browse All Events",
-            url: "/events",
-            type: "link"
-          }
-        ],
-        suggestedFollowUps: [
-          "Which events are free?",
-          "How do I register for an event?"
-        ]
-      };
-    }
-  }
-  const categories = ["technology", "cultural", "career", "sports", "seminar", "hackathon", "workshop", "arts"];
-  const matchedCategory = categories.find((c) => query.includes(c));
-  if (matchedCategory) {
-    const events = await searchPublishedEvents({ category: matchedCategory });
-    if (events.length === 0) {
-      return {
-        message: `Currently, there are no published events under the **${matchedCategory.toUpperCase()}** category. Please check back soon as campus organizers frequently publish new activities!`,
-        actions: [
-          {
-            label: "Browse All Events",
-            url: "/events",
-            type: "link"
-          }
-        ],
-        suggestedFollowUps: [
-          "Which events are free?",
-          "Show my registrations"
-        ]
-      };
-    }
-    const eventList = events.slice(0, 4).map((e) => {
-      const fee = (e.price || 0) > 0 ? `\u20B9${e.price}` : "FREE";
-      const dateStr = e.startTime ? new Date(e.startTime).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Scheduled";
-      return `\u2022 **${e.title}** \u2014 **${fee}**
-  Venue: ${e.venue} \u2022 Date: ${dateStr} \u2022 Capacity: ${e.capacity} seats`;
-    }).join("\n\n");
-    return {
-      message: `Found **${events.length}** event(s) in **${matchedCategory.toUpperCase()}**:
-
-${eventList}`,
-      actions: events.slice(0, 2).map((e) => ({
-        label: `View ${e.title}`,
-        url: `/events/${e.id}`,
-        type: "link"
-      })),
-      suggestedFollowUps: [
-        "Which events are free?",
-        "How do I register for an event?",
-        "Show my registrations"
-      ]
-    };
-  }
-  if (query.includes("event") || query.includes("available") || query.includes("upcoming") || query.includes("happening") || query.includes("find") || query.includes("what is going on") || query.includes("browse")) {
-    const published = await searchPublishedEvents({});
-    if (published.length === 0) {
-      return {
-        message: "There are currently no published events live on EventHub. Please check back soon!",
-        suggestedFollowUps: ["How do I register for an event?", "Where is my QR pass?"]
-      };
-    }
-    const list = published.slice(0, 5).map((e) => {
-      const fee = (e.price || 0) > 0 ? `\u20B9${e.price}` : "Free Pass";
-      const dateStr = e.startTime ? new Date(e.startTime).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Upcoming";
-      return `\u2022 **${e.title}** (${e.category})
-  *Date:* ${dateStr} | *Venue:* ${e.venue} | *Entry:* **${fee}**`;
-    }).join("\n\n");
-    return {
-      message: `Here are the upcoming **Published Campus Events** currently available for registration on EventHub:
-
-${list}`,
-      actions: [
+        },
         {
-          label: "\u{1F50D} Explore All Events",
-          url: "/events",
+          label: "My Attendee Dashboard",
+          url: "/dashboard/attendee",
           type: "link"
         }
-      ],
-      suggestedFollowUps: [
-        "Which events are free?",
-        "What events require payment?",
-        "Show my registrations"
       ]
     };
-  }
-  const defaultPublished = await searchPublishedEvents({});
+  })();
   return {
-    message: `Hello **${userName}**! I am your **EventHub AI Event Assistant**. I can help you discover campus events, manage your registrations, check your payment status, and find your gate QR passes.
-
-Here are some things you can ask me:`,
-    suggestedFollowUps: [
-      "What events are available?",
-      "Show my registrations",
-      "Which events are free?",
-      "Where is my QR pass?",
-      "How do I register for an event?"
-    ],
-    actions: [
-      {
-        label: "Browse Events Catalog",
-        url: "/events",
-        type: "link"
-      },
-      {
-        label: "My Attendee Dashboard",
-        url: "/dashboard/attendee",
-        type: "link"
-      }
-    ]
+    ...baseThemeMeta,
+    ...rawResponse
   };
 }
 
@@ -90511,7 +90900,7 @@ router11.post("/chat/attendee", requireAuth, chatRateLimiter, async (req, res) =
     });
     return;
   }
-  const { message } = req.body || {};
+  const { message, eventId } = req.body || {};
   if (!message || typeof message !== "string" || !message.trim()) {
     res.status(400).json({ error: "Message is required and cannot be empty." });
     return;
@@ -90525,7 +90914,8 @@ router11.post("/chat/attendee", requireAuth, chatRateLimiter, async (req, res) =
   } catch {
   }
   try {
-    const aiResponse = await processAttendeeChatMessage(message, userId, userName);
+    const targetEventId = eventId && !isNaN(Number(eventId)) ? Number(eventId) : void 0;
+    const aiResponse = await processAttendeeChatMessage(message, userId, userName, targetEventId);
     res.status(200).json(aiResponse);
   } catch (err) {
     console.error("AI Assistant processing error:", err);

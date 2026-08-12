@@ -201,7 +201,7 @@ router.post("/chat/attendee", requireAuth, chatRateLimiter, async (req: Request,
     return;
   }
 
-  const { message } = req.body || {};
+  const { message, eventId } = req.body || {};
 
   // 2. Validate input
   if (!message || typeof message !== "string" || !message.trim()) {
@@ -223,7 +223,8 @@ router.post("/chat/attendee", requireAuth, chatRateLimiter, async (req: Request,
   } catch {}
 
   try {
-    const aiResponse = await processAttendeeChatMessage(message, userId!, userName);
+    const targetEventId = eventId && !isNaN(Number(eventId)) ? Number(eventId) : undefined;
+    const aiResponse = await processAttendeeChatMessage(message, userId!, userName, targetEventId);
     res.status(200).json(aiResponse);
   } catch (err: any) {
     console.error("AI Assistant processing error:", err);
