@@ -185,7 +185,7 @@ export default function Home() {
                   <Button 
                     variant="outline" 
                     size="lg"
-                    className="border-white/30 text-white hover:bg-white/10 font-bold h-12 px-6 rounded-xl cursor-pointer text-sm"
+                    className="bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold h-12 px-6 rounded-xl cursor-pointer text-sm shadow-xs transition-all"
                   >
                     Organizer Portal
                   </Button>
