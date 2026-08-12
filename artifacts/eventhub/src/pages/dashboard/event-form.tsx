@@ -286,74 +286,99 @@ export default function EventForm() {
     setFaqs(updated);
   };
 
-  // Submit Handler supporting Draft & Approval Submissions
-  const handleFormSubmit = (targetStatus: "draft" | "pending_approval") => {
-    form.setValue("status", targetStatus);
-    form.handleSubmit((values: EventFormValues) => {
-      const payload = {
-        title: values.title,
-        description: values.description,
-        category: values.category,
-        venue: values.venue,
-        startTime: new Date(values.startTime).toISOString(),
-        endTime: new Date(values.endTime).toISOString(),
-        capacity: values.capacity,
-        price: Number(values.price) || 0,
-        registrationDeadline: values.registrationDeadline
-          ? new Date(values.registrationDeadline).toISOString()
-          : undefined,
-        bannerUrl: values.bannerUrl || PRESET_BANNERS[0].url,
-        mascotUrl: mascot?.mascotUrl || form.getValues("mascotUrl") || null,
-        mascotPrompt: mascot?.prompt || form.getValues("mascotPrompt") || null,
-        status: targetStatus,
-      };
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-      if (isEdit && eventId) {
-        updateMutation.mutate({ id: eventId, data: payload }, {
-          onSuccess: async () => {
-            if (targetStatus === "pending_approval") {
-              await fetch(`/api/events/${eventId}/submit-approval`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${localStorage.getItem("eventhub_token") || ""}`,
-                },
-              });
-              toast({
-                title: "📬 Event Submitted for Admin Approval",
-                description: `"${values.title}" is now awaiting administrative review.`,
-              });
-            } else {
-              toast({ title: "Event Saved as Draft", description: `"${values.title}" has been saved.` });
-            }
-            queryClient.invalidateQueries();
-            setLocation("/dashboard/organizer/events");
-          },
-        });
-      } else {
-        createMutation.mutate({ data: payload }, {
-          onSuccess: async (createdEv: any) => {
-            if (targetStatus === "pending_approval" && createdEv?.id) {
-              await fetch(`/api/events/${createdEv.id}/submit-approval`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${localStorage.getItem("eventhub_token") || ""}`,
-                },
-              });
-              toast({
-                title: "📬 Event Created & Submitted for Admin Approval",
-                description: `"${values.title}" is awaiting review from campus admins.`,
-              });
-            } else {
-              toast({ title: "📝 Event Draft Saved", description: `"${values.title}" saved to your drafts.` });
-            }
-            queryClient.invalidateQueries();
-            setLocation("/dashboard/organizer/events");
-          },
-        });
+  // Submit Handler supporting Draft & Approval Submissions
+  const handleFormSubmit = async (targetStatus: "draft" | "pending_approval") => {
+    form.setValue("status", targetStatus);
+    setSubmitError(null);
+
+    form.handleSubmit(
+      async (values: EventFormValues) => {
+        setIsSubmitting(true);
+        const payload = {
+          title: values.title,
+          description: values.description,
+          category: values.category,
+          venue: values.venue,
+          startTime: new Date(values.startTime).toISOString(),
+          endTime: new Date(values.endTime).toISOString(),
+          capacity: Number(values.capacity) || 200,
+          price: Number(values.price) || 0,
+          registrationDeadline: values.registrationDeadline
+            ? new Date(values.registrationDeadline).toISOString()
+            : undefined,
+          bannerUrl: values.bannerUrl || PRESET_BANNERS[0].url,
+          mascotUrl: mascot?.mascotUrl || form.getValues("mascotUrl") || null,
+          mascotPrompt: mascot?.prompt || form.getValues("mascotPrompt") || null,
+          status: targetStatus,
+        };
+
+        try {
+          const token = localStorage.getItem("eventhub_token") || "";
+          const endpoint = isEdit && eventId ? `/api/events/${eventId}` : "/api/events";
+          const method = isEdit && eventId ? "PUT" : "POST";
+
+          const res = await fetch(endpoint, {
+            method,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            throw new Error(data.error || "Failed to save event. Please check server validation.");
+          }
+
+          const createdId = data.id || eventId;
+
+          // If submitting for approval, trigger the submit-approval workflow endpoint
+          if (targetStatus === "pending_approval" && createdId) {
+            await fetch(`/api/events/${createdId}/submit-approval`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: token ? `Bearer ${token}` : "",
+              },
+            }).catch(() => {});
+
+            toast({
+              title: "📬 Event Submitted for Admin Approval",
+              description: `"${values.title}" is now awaiting administrative review.`,
+            });
+          } else {
+            toast({
+              title: "📝 Event Draft Saved",
+              description: `"${values.title}" has been saved to your dashboard.`,
+            });
+          }
+
+          queryClient.invalidateQueries();
+          setLocation("/dashboard/organizer/events");
+        } catch (err: any) {
+          setSubmitError(err.message || "Failed to save event. Please verify all required fields.");
+          toast({
+            title: "Submission Notice",
+            description: err.message || "Could not save event.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsSubmitting(false);
+        }
+      },
+      (validationErrors) => {
+        const firstErrorKey = Object.keys(validationErrors)[0];
+        const errorMsg = firstErrorKey
+          ? `${firstErrorKey}: ${(validationErrors as any)[firstErrorKey]?.message || "Invalid value"}`
+          : "Please complete all mandatory fields marked with *";
+        setSubmitError(`Validation Error: ${errorMsg}`);
       }
-    })();
+    )();
   };
 
   const mutation = isEdit ? updateMutation : createMutation;
@@ -377,12 +402,12 @@ export default function EventForm() {
           </div>
         </div>
 
-        {mutation.isError && (
+        {(submitError || mutation.isError) && (
           <Alert variant="destructive" className="rounded-2xl">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               {/* @ts-ignore */}
-              {mutation.error?.response?.data?.error || "Failed to save event. Please verify all required fields."}
+              {submitError || mutation.error?.response?.data?.error || "Failed to save event. Please verify all required fields."}
             </AlertDescription>
           </Alert>
         )}
@@ -688,20 +713,20 @@ export default function EventForm() {
                 type="button"
                 variant="outline"
                 onClick={() => handleFormSubmit("draft")}
-                disabled={mutation.isPending}
+                disabled={isSubmitting || mutation.isPending}
                 className="font-bold text-xs shadow-2xs h-11 px-5"
               >
-                Save as Draft
+                {isSubmitting ? "Saving..." : "Save as Draft"}
               </Button>
 
               <Button
                 type="button"
                 onClick={() => handleFormSubmit("pending_approval")}
-                disabled={mutation.isPending}
-                className="font-bold text-xs bg-amber-600 hover:bg-amber-700 text-white shadow-md h-11 px-6"
+                disabled={isSubmitting || mutation.isPending}
+                className="font-bold text-xs bg-amber-600 hover:bg-amber-700 text-white shadow-md h-11 px-6 cursor-pointer"
               >
                 <Send className="w-4 h-4 mr-2" />
-                {mutation.isPending ? "Submitting..." : "Submit for Admin Approval"}
+                {isSubmitting ? "Submitting..." : "Submit for Admin Approval"}
               </Button>
             </div>
           </div>

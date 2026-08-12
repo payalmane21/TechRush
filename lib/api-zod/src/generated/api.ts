@@ -127,20 +127,20 @@ export const ListEventsResponse = zod.object({
  * @summary Create a new event (organizer only)
  */
 
-
-
-
 export const CreateEventBody = zod.object({
   "title": zod.string().min(1),
-  "description": zod.string().optional(),
+  "description": zod.string().optional().nullish(),
   "category": zod.string(),
-  "bannerUrl": zod.string().optional(),
+  "bannerUrl": zod.string().optional().nullish(),
+  "mascotUrl": zod.string().optional().nullish(),
+  "mascotPrompt": zod.string().optional().nullish(),
   "venue": zod.string(),
   "startTime": zod.coerce.date(),
   "endTime": zod.coerce.date(),
   "capacity": zod.int().min(1),
-  "registrationDeadline": zod.coerce.date().optional(),
-  "status": zod.enum(['draft', 'published']).optional()
+  "price": zod.coerce.number().optional().nullish(),
+  "registrationDeadline": zod.coerce.date().optional().nullish(),
+  "status": zod.enum(['draft', 'pending_approval', 'approved', 'published', 'rejected', 'cancelled', 'archived']).optional()
 })
 
 export const CreateEventResponse = zod.object({
@@ -154,7 +154,7 @@ export const CreateEventResponse = zod.object({
   "endTime": zod.coerce.date(),
   "capacity": zod.int(),
   "registrationDeadline": zod.coerce.date().nullish(),
-  "status": zod.enum(['draft', 'published', 'cancelled', 'archived']),
+  "status": zod.enum(['draft', 'pending_approval', 'approved', 'published', 'rejected', 'cancelled', 'archived']),
   "organizerId": zod.int(),
   "registeredCount": zod.int().optional(),
   "checkedInCount": zod.int().optional(),
@@ -180,7 +180,7 @@ export const GetEventResponse = zod.object({
   "endTime": zod.coerce.date(),
   "capacity": zod.int(),
   "registrationDeadline": zod.coerce.date().nullish(),
-  "status": zod.enum(['draft', 'published', 'cancelled', 'archived']),
+  "status": zod.enum(['draft', 'pending_approval', 'approved', 'published', 'rejected', 'cancelled', 'archived']),
   "organizerId": zod.int(),
   "organizerName": zod.string().optional(),
   "registeredCount": zod.int().optional(),
@@ -200,18 +200,20 @@ export const UpdateEventParams = zod.object({
 
 
 
-
 export const UpdateEventBody = zod.object({
   "title": zod.string().min(1).optional(),
-  "description": zod.string().optional(),
+  "description": zod.string().optional().nullish(),
   "category": zod.string().optional(),
-  "bannerUrl": zod.string().optional(),
+  "bannerUrl": zod.string().optional().nullish(),
+  "mascotUrl": zod.string().optional().nullish(),
+  "mascotPrompt": zod.string().optional().nullish(),
   "venue": zod.string().optional(),
   "startTime": zod.coerce.date().optional(),
   "endTime": zod.coerce.date().optional(),
   "capacity": zod.int().min(1).optional(),
-  "registrationDeadline": zod.coerce.date().optional(),
-  "status": zod.enum(['draft', 'published', 'cancelled', 'archived']).optional()
+  "price": zod.coerce.number().optional().nullish(),
+  "registrationDeadline": zod.coerce.date().optional().nullish(),
+  "status": zod.enum(['draft', 'pending_approval', 'approved', 'published', 'rejected', 'cancelled', 'archived']).optional()
 })
 
 export const UpdateEventResponse = zod.object({

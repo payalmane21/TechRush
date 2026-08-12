@@ -86623,15 +86623,18 @@ var ListEventsResponse = object({
 });
 var CreateEventBody = object({
   "title": string2().min(1),
-  "description": string2().optional(),
+  "description": string2().optional().nullish(),
   "category": string2(),
-  "bannerUrl": string2().optional(),
+  "bannerUrl": string2().optional().nullish(),
+  "mascotUrl": string2().optional().nullish(),
+  "mascotPrompt": string2().optional().nullish(),
   "venue": string2(),
   "startTime": coerce_exports.date(),
   "endTime": coerce_exports.date(),
   "capacity": int().min(1),
-  "registrationDeadline": coerce_exports.date().optional(),
-  "status": _enum2(["draft", "published"]).optional()
+  "price": coerce_exports.number().optional().nullish(),
+  "registrationDeadline": coerce_exports.date().optional().nullish(),
+  "status": _enum2(["draft", "pending_approval", "approved", "published", "rejected", "cancelled", "archived"]).optional()
 });
 var CreateEventResponse = object({
   "id": int(),
@@ -86644,7 +86647,7 @@ var CreateEventResponse = object({
   "endTime": coerce_exports.date(),
   "capacity": int(),
   "registrationDeadline": coerce_exports.date().nullish(),
-  "status": _enum2(["draft", "published", "cancelled", "archived"]),
+  "status": _enum2(["draft", "pending_approval", "approved", "published", "rejected", "cancelled", "archived"]),
   "organizerId": int(),
   "registeredCount": int().optional(),
   "checkedInCount": int().optional(),
@@ -86664,7 +86667,7 @@ var GetEventResponse = object({
   "endTime": coerce_exports.date(),
   "capacity": int(),
   "registrationDeadline": coerce_exports.date().nullish(),
-  "status": _enum2(["draft", "published", "cancelled", "archived"]),
+  "status": _enum2(["draft", "pending_approval", "approved", "published", "rejected", "cancelled", "archived"]),
   "organizerId": int(),
   "organizerName": string2().optional(),
   "registeredCount": int().optional(),
@@ -86677,15 +86680,18 @@ var UpdateEventParams = object({
 });
 var UpdateEventBody = object({
   "title": string2().min(1).optional(),
-  "description": string2().optional(),
+  "description": string2().optional().nullish(),
   "category": string2().optional(),
-  "bannerUrl": string2().optional(),
+  "bannerUrl": string2().optional().nullish(),
+  "mascotUrl": string2().optional().nullish(),
+  "mascotPrompt": string2().optional().nullish(),
   "venue": string2().optional(),
   "startTime": coerce_exports.date().optional(),
   "endTime": coerce_exports.date().optional(),
   "capacity": int().min(1).optional(),
-  "registrationDeadline": coerce_exports.date().optional(),
-  "status": _enum2(["draft", "published", "cancelled", "archived"]).optional()
+  "price": coerce_exports.number().optional().nullish(),
+  "registrationDeadline": coerce_exports.date().optional().nullish(),
+  "status": _enum2(["draft", "pending_approval", "approved", "published", "rejected", "cancelled", "archived"]).optional()
 });
 var UpdateEventResponse = object({
   "id": int(),
