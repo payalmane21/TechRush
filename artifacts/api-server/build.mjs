@@ -123,6 +123,35 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  // Bundle standalone Vercel Serverless Function to root /api/index.js
+  const rootDir = path.resolve(artifactDir, "../..");
+  await esbuild({
+    entryPoints: [path.resolve(artifactDir, "src/app.ts")],
+    platform: "node",
+    bundle: true,
+    format: "esm",
+    outfile: path.resolve(rootDir, "api/index.js"),
+    logLevel: "info",
+    external: [
+      "*.node",
+      "connect-pg-simple",
+      "bcrypt",
+      "fsevents",
+      "lightningcss",
+      "pg-native"
+    ],
+    banner: {
+      js: `import { createRequire as __bannerCrReq } from 'node:module';
+import __bannerPath from 'node:path';
+import __bannerUrl from 'node:url';
+
+globalThis.require = __bannerCrReq(import.meta.url);
+globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
+globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
+`,
+    },
+  });
 }
 
 buildAll().catch((err) => {
