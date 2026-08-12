@@ -8,3 +8,4 @@ export * from "./volunteerRequirements";
 export * from "./tasks";
 export * from "./taskAssignments";
 export * from "./checkinLogs";
+export * from "./chatMessages";

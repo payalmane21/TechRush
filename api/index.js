@@ -56069,13 +56069,39 @@ var init_checkinLogs = __esm({
   }
 });
 
+// ../../lib/db/src/schema/chatMessages.ts
+var chatMessagesTable, insertChatMessageSchema;
+var init_chatMessages = __esm({
+  "../../lib/db/src/schema/chatMessages.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_zod();
+    init_users();
+    chatMessagesTable = pgTable("chat_messages", {
+      id: serial("id").primaryKey(),
+      channelId: text("channel_id").notNull().default("eventhub-team"),
+      senderId: integer("sender_id").references(() => usersTable.id),
+      senderName: text("sender_name").notNull(),
+      senderRole: text("sender_role").notNull().default("attendee"),
+      message: text("message").notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    });
+    insertChatMessageSchema = createInsertSchema(chatMessagesTable).omit({
+      id: true,
+      createdAt: true
+    });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
+  chatMessagesTable: () => chatMessagesTable,
   checkinActionEnum: () => checkinActionEnum,
   checkinLogsTable: () => checkinLogsTable,
   eventStatusEnum: () => eventStatusEnum,
   eventsTable: () => eventsTable,
+  insertChatMessageSchema: () => insertChatMessageSchema,
   insertCheckinLogSchema: () => insertCheckinLogSchema,
   insertEventSchema: () => insertEventSchema,
   insertNotificationSchema: () => insertNotificationSchema,
@@ -56114,17 +56140,20 @@ var init_schema2 = __esm({
     init_tasks();
     init_taskAssignments();
     init_checkinLogs();
+    init_chatMessages();
   }
 });
 
 // ../../lib/db/src/index.ts
 var src_exports = {};
 __export(src_exports, {
+  chatMessagesTable: () => chatMessagesTable,
   checkinActionEnum: () => checkinActionEnum,
   checkinLogsTable: () => checkinLogsTable,
   db: () => db,
   eventStatusEnum: () => eventStatusEnum,
   eventsTable: () => eventsTable,
+  insertChatMessageSchema: () => insertChatMessageSchema,
   insertCheckinLogSchema: () => insertCheckinLogSchema,
   insertEventSchema: () => insertEventSchema,
   insertNotificationSchema: () => insertNotificationSchema,
@@ -90026,12 +90055,126 @@ init_drizzle_orm();
 var router11 = (0, import_express11.Router)();
 var chatRateLimiter = rate_limit_default({
   windowMs: 60 * 1e3,
-  max: 30,
+  max: 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: "Too many requests. Please wait a moment before asking the AI assistant again."
+    error: "Too many messages sent. Please wait a moment before sending again."
   }
+});
+var inMemoryChatMessages = [
+  {
+    id: 1,
+    channelId: "eventhub-team",
+    senderId: 999,
+    senderName: "Tanishka Ghewari",
+    senderRole: "admin",
+    message: "\u{1F44B} Welcome to the EventHub Team Live Chat! All roles are connected.",
+    createdAt: new Date(Date.now() - 36e5).toISOString()
+  },
+  {
+    id: 2,
+    channelId: "eventhub-team",
+    senderId: 2,
+    senderName: "Payal Mane",
+    senderRole: "organizer",
+    message: "Ready to coordinate live campus events and review registrations.",
+    createdAt: new Date(Date.now() - 18e5).toISOString()
+  }
+];
+var DEMO_USER_NAMES = {
+  999: { name: "Tanishka Ghewari", role: "admin" },
+  2: { name: "Payal Mane", role: "organizer" },
+  3: { name: "Mahi Kasliwal", role: "attendee" },
+  4: { name: "Nehal Ahuja", role: "volunteer" },
+  998: { name: "Tanishka Ghewari", role: "admin" },
+  102: { name: "Payal Mane", role: "organizer" },
+  103: { name: "Mahi Kasliwal", role: "attendee" },
+  104: { name: "Nehal Ahuja", role: "volunteer" }
+};
+router11.get("/chat/messages", requireAuth, async (req, res) => {
+  const channelId = req.query.channelId || "eventhub-team";
+  try {
+    const dbMessages = await db.select().from(chatMessagesTable).where(eq(chatMessagesTable.channelId, channelId)).orderBy(asc(chatMessagesTable.createdAt));
+    if (dbMessages && dbMessages.length > 0) {
+      res.json({
+        messages: dbMessages.map((m) => ({
+          ...m,
+          createdAt: m.createdAt.toISOString()
+        })),
+        channelId
+      });
+      return;
+    }
+  } catch {
+  }
+  const filtered = inMemoryChatMessages.filter((m) => m.channelId === channelId);
+  res.json({
+    messages: filtered,
+    channelId
+  });
+});
+router11.post("/chat/messages", requireAuth, chatRateLimiter, async (req, res) => {
+  const userId = req.session.userId || 1;
+  const userRole = req.session.userRole || req.session.role || "attendee";
+  const { message, channelId = "eventhub-team" } = req.body || {};
+  if (!message || typeof message !== "string" || !message.trim()) {
+    res.status(400).json({ error: "Message cannot be empty." });
+    return;
+  }
+  const cleanMessage = message.trim().slice(0, 1e3);
+  let senderName = DEMO_USER_NAMES[userId]?.name || "Team Member";
+  try {
+    const [user] = await db.select({ name: usersTable.name, role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (user?.name) {
+      senderName = user.name;
+    }
+  } catch {
+  }
+  const now = /* @__PURE__ */ new Date();
+  let savedMessage;
+  try {
+    const [inserted] = await db.insert(chatMessagesTable).values({
+      channelId,
+      senderId: userId,
+      senderName,
+      senderRole: userRole,
+      message: cleanMessage
+    }).returning();
+    if (inserted) {
+      savedMessage = {
+        id: inserted.id,
+        channelId: inserted.channelId,
+        senderId: inserted.senderId || userId,
+        senderName: inserted.senderName,
+        senderRole: inserted.senderRole,
+        message: inserted.message,
+        createdAt: inserted.createdAt.toISOString()
+      };
+    } else {
+      throw new Error("Insert returned empty");
+    }
+  } catch {
+    const msgId = Date.now() + Math.floor(Math.random() * 1e3);
+    savedMessage = {
+      id: msgId,
+      channelId,
+      senderId: userId,
+      senderName,
+      senderRole: userRole,
+      message: cleanMessage,
+      createdAt: now.toISOString()
+    };
+  }
+  inMemoryChatMessages.push(savedMessage);
+  if (inMemoryChatMessages.length > 500) {
+    inMemoryChatMessages.shift();
+  }
+  const io = getIo();
+  if (io) {
+    io.emit("new_chat_message", savedMessage);
+  }
+  res.status(201).json(savedMessage);
 });
 router11.post("/chat/attendee", requireAuth, chatRateLimiter, async (req, res) => {
   const userId = req.session.userId;
