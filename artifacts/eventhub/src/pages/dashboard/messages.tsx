@@ -261,19 +261,6 @@ export default function MessagingCenter() {
                 })}
               </CardContent>
             </Card>
-
-            {/* Live Presentation Tip Card */}
-            <Card className="border-primary/20 bg-primary/5 rounded-3xl p-4 shadow-sm">
-              <div className="flex items-start gap-3">
-                <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-foreground">Multi-Device Presentation Demo</h4>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Type a message on any device (Admin, Organizer, Attendee, or Volunteer). All 4 devices receive and display updates instantly!
-                  </p>
-                </div>
-              </div>
-            </Card>
           </div>
 
           {/* RIGHT SIDE: LIVE GROUP CHAT FEED */}
