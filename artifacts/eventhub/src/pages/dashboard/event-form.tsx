@@ -41,6 +41,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { broadcastDataMutation } from "@/components/realtime-sync-provider";
 import { synthesizeMascot, MASCOT_PROFILES } from "@/lib/mascot-generator";
 
