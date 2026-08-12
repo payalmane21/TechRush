@@ -41,8 +41,8 @@ import {
   DollarSign
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { broadcastDataMutation } from "@/components/realtime-sync-provider";
+import { synthesizeMascot, MASCOT_PROFILES } from "@/lib/mascot-generator";
 
 const eventSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -201,44 +201,67 @@ export default function EventForm() {
     }
   }, [existing]);
 
+  const applyMascotData = (data: any) => {
+    setMascot(data);
+    form.setValue("mascotUrl", data.mascotUrl);
+    form.setValue("mascotPrompt", data.prompt);
+    toast({
+      title: `✨ Mascot Active: ${data.mascotName || data.name}`,
+      description: `${data.archetype || data.category} mascot assigned to your event!`,
+    });
+  };
+
   const handleGenerateMascot = async () => {
     setIsGeneratingMascot(true);
+    const title = form.getValues("title") || "Campus Event";
+    const category = form.getValues("category") || "Technology";
+    const tags = form.getValues("tags") || "";
+
     try {
+      // 1. Try server-side generation
       const res = await fetch("/api/events/mascot/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("eventhub_token") || ""}`,
         },
-        body: JSON.stringify({
-          title: form.getValues("title"),
-          description: form.getValues("description"),
-          category: form.getValues("category"),
-          keywords: form.getValues("tags"),
-        }),
+        body: JSON.stringify({ title, category, keywords: tags }),
       });
 
       const contentType = res.headers.get("content-type") || "";
       if (contentType.includes("application/json")) {
         const data = await res.json();
-        if (data.mascotUrl) {
-          setMascot(data);
-          form.setValue("mascotUrl", data.mascotUrl);
-          form.setValue("mascotPrompt", data.prompt);
-          toast({
-            title: `✨ Mascot Generated: ${data.mascotName}`,
-            description: `Generated a custom mascot tailored to your ${data.category} event!`,
-          });
+        if (data && data.mascotUrl) {
+          applyMascotData(data);
+          setIsGeneratingMascot(false);
+          return;
         }
       }
     } catch (err) {
-      toast({
-        title: "AI Generator Notice",
-        description: "Event creation is fully functional even without a mascot.",
-      });
-    } finally {
-      setIsGeneratingMascot(false);
+      console.warn("Server mascot note:", err);
     }
+
+    // 2. Instant client-side generation engine fallback
+    const fallbackMascot = synthesizeMascot(title, category, tags);
+    applyMascotData(fallbackMascot);
+    setIsGeneratingMascot(false);
+  };
+
+  const handleSelectPresetArchetype = (key: string) => {
+    const profile = MASCOT_PROFILES[key];
+    if (!profile) return;
+    const title = form.getValues("title") || "Campus Event";
+    let mascotUrl = `data:image/svg+xml;base64,${btoa(profile.svgIcon)}`;
+    applyMascotData({
+      mascotName: profile.name,
+      personality: profile.personality,
+      category: key,
+      prompt: `${profile.prompt} Tailored for '${title}'.`,
+      mascotUrl,
+      tags: profile.tags,
+      themeColor: profile.themeColor,
+      archetype: profile.archetype,
+    });
   };
 
   const handleRemoveMascot = () => {
@@ -584,6 +607,33 @@ export default function EventForm() {
               </div>
             </div>
 
+            {/* Archetype Quick Selector Pills */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+                Quick Character Archetypes:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: "technology", label: "🦉 Cyber Owl", tag: "Tech & Hackathons" },
+                  { key: "cultural", label: "🦊 Melody Fox", tag: "Cultural & Arts" },
+                  { key: "sports", label: "🐆 Lightning Panther", tag: "Sports & Athletics" },
+                  { key: "business", label: "🦅 Visionary Falcon", tag: "Business & Summits" },
+                  { key: "science", label: "🦦 Discovery Otter", tag: "Science & STEM" },
+                ].map((item) => (
+                  <Button
+                    key={item.key}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectPresetArchetype(item.key)}
+                    className="text-xs font-semibold hover:border-primary cursor-pointer rounded-xl h-8"
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             {mascot ? (
               <div className="p-5 rounded-2xl bg-muted/20 border border-border flex flex-col sm:flex-row items-center sm:items-start gap-5">
                 <div className="w-32 h-32 rounded-2xl overflow-hidden shrink-0 border-2 border-primary/40 shadow-md bg-card p-1">
@@ -619,7 +669,7 @@ export default function EventForm() {
                 <div className="space-y-1">
                   <h4 className="text-sm font-bold text-foreground">No Mascot Generated Yet</h4>
                   <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                    Click "Generate AI Mascot" above to create an exclusive mascot visual tailored to your event's title and category.
+                    Click <strong>"Generate AI Mascot"</strong> or select one of the archetype pills above to instantly create a mascot for this event.
                   </p>
                 </div>
               </div>
