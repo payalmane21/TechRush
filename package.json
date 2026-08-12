@@ -11,6 +11,7 @@
   "private": true,
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.1",
+    "socket.io-client": "^4.8.1",
     "vite": "^5.4.11"
   },
   "devDependencies": {

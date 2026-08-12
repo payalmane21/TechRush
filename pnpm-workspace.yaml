@@ -59,6 +59,10 @@ catalog:
   react: 19.1.0
   # Must be this exact version because expo requires it
   react-dom: 19.1.0
+  socket.io-client: ^4.8.1
+  html5-qrcode: ^2.3.8
+  recharts: ^2.15.2
+  date-fns: ^3.6.0
   tailwind-merge: ^3.3.1
   tailwindcss: ^4.1.14
   tsx: ^4.21.0

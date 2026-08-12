@@ -51,6 +51,12 @@ catalogs:
     react-dom:
       specifier: 19.1.0
       version: 19.1.0
+    recharts:
+      specifier: ^2.15.2
+      version: 2.15.4
+    socket.io-client:
+      specifier: ^4.8.1
+      version: 4.8.3
     tailwind-merge:
       specifier: ^3.3.1
       version: 3.6.0
@@ -154,6 +160,9 @@ importers:
       '@replit/connectors-sdk':
         specifier: ^0.4.1
         version: 0.4.1
+      socket.io-client:
+        specifier: ^4.8.1
+        version: 4.8.3
       vite:
         specifier: ^5.4.11
         version: 5.4.21(@types/node@26.1.2)(lightningcss@1.32.0)
@@ -430,10 +439,10 @@ importers:
         specifier: ^2.1.7
         version: 2.1.9(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       recharts:
-        specifier: ^2.15.2
+        specifier: 'catalog:'
         version: 2.15.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       socket.io-client:
-        specifier: ^4.8.1
+        specifier: 'catalog:'
         version: 4.8.3
       sonner:
         specifier: ^2.0.7
