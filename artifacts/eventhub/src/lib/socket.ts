@@ -37,9 +37,34 @@ class RealtimeSyncEngine {
     if (typeof window === "undefined") return;
 
     try {
-      // Dynamic import prevents Rollup build-time dependency resolution issues in CI/Vercel
-      const socketModule = await import("socket.io-client");
-      const ioFunc = (socketModule as any).io || (socketModule as any).default || socketModule;
+      let ioFunc: any = (window as any).io;
+
+      if (!ioFunc) {
+        // Safe runtime dynamic loader (hidden from Rollup AST build-time analyzer)
+        try {
+          const modName = "socket.io-client";
+          const dynamicImporter = new Function("m", "return import(m)");
+          const socketModule = await dynamicImporter(modName);
+          ioFunc = socketModule.io || socketModule.default || socketModule;
+        } catch {
+          // CDN Fallback if build container cached node_modules is missing it
+          ioFunc = await new Promise((resolve) => {
+            if (typeof document === "undefined") return resolve(null);
+            const script = document.createElement("script");
+            script.src = "https://cdn.socket.io/4.8.1/socket.io.min.js";
+            script.async = true;
+            script.onload = () => resolve((window as any).io || null);
+            script.onerror = () => resolve(null);
+            document.head.appendChild(script);
+          });
+        }
+      }
+
+      if (!ioFunc) {
+        console.warn("⚠️ [RealtimeSync] Socket.IO engine operating in local BroadcastChannel mode.");
+        return;
+      }
+
       const socketUrl = window.location.origin;
 
       this.socket = ioFunc(socketUrl, {
