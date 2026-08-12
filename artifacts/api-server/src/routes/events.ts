@@ -288,8 +288,8 @@ router.post("/events/:id/publish", requireAuth, requireRole("organizer", "admin"
   res.json(found || { id, status: "published" });
 });
 
-// PUT /events/:id
-router.put("/events/:id", requireAuth, requireRole("organizer", "admin"), async (req, res): Promise<void> => {
+// PUT /events/:id & PATCH /events/:id
+const updateEventHandler = async (req: any, res: any): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw!, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid event ID" }); return; }
@@ -330,7 +330,10 @@ router.put("/events/:id", requireAuth, requireRole("organizer", "admin"), async 
 
   getIo()?.emit("event_changed", { action: "update", event: found || { id, ...body } });
   res.json(found || { id, ...body });
-});
+};
+
+router.put("/events/:id", requireAuth, requireRole("organizer", "admin"), updateEventHandler);
+router.patch("/events/:id", requireAuth, requireRole("organizer", "admin"), updateEventHandler);
 
 // DELETE /events/:id
 router.delete("/events/:id", requireAuth, requireRole("organizer", "admin"), async (req, res): Promise<void> => {
@@ -348,25 +351,6 @@ router.delete("/events/:id", requireAuth, requireRole("organizer", "admin"), asy
   } catch {}
 
   getIo()?.emit("event_changed", { action: "delete", id });
-  res.sendStatus(204);
-});
-
-// DELETE /events/:id
-router.delete("/events/:id", requireAuth, requireRole("organizer", "admin"), async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw!, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid event ID" }); return; }
-
-  try {
-    const [existing] = await db.select().from(eventsTable).where(eq(eventsTable.id, id));
-    if (existing) {
-      if (existing.organizerId !== req.session.userId && req.session.userRole !== "admin") {
-        res.status(403).json({ error: "Forbidden" }); return;
-      }
-      await db.delete(eventsTable).where(eq(eventsTable.id, id));
-    }
-  } catch {}
-
   res.sendStatus(204);
 });
 

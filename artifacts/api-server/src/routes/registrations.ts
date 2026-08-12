@@ -8,6 +8,9 @@ import { getIo } from "../lib/socket";
 
 const router: IRouter = Router();
 
+// In-memory registration tracking cache for instant duplicate detection & fallback store
+const inMemoryRegistrations = new Map<string, any>();
+
 // POST /events/:id/register & /registrations
 const registerEventHandler = async (req: any, res: any): Promise<void> => {
   const raw = req.params.id ? (Array.isArray(req.params.id) ? req.params.id[0] : req.params.id) : null;
@@ -15,12 +18,22 @@ const registerEventHandler = async (req: any, res: any): Promise<void> => {
   if (isNaN(eventId)) { res.status(400).json({ error: "Invalid event ID" }); return; }
 
   const userId = req.session.userId || 1;
+  const userEventKey = `${userId}:${eventId}`;
+
+  // Check In-Memory Cache first for duplicate registration
+  if (inMemoryRegistrations.has(userEventKey)) {
+    const existing = inMemoryRegistrations.get(userEventKey)!;
+    const qrCodeDataUrl = await generateQrCodeDataUrl(existing.qrToken);
+    res.status(200).json({
+      ...existing,
+      qrCodeDataUrl,
+      message: "Already registered for this event",
+    });
+    return;
+  }
 
   try {
-    // Check event exists
-    const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId));
-
-    // Check for existing registration
+    // Check for existing registration in DB
     const [existing] = await db
       .select()
       .from(registrationsTable)
@@ -32,6 +45,7 @@ const registerEventHandler = async (req: any, res: any): Promise<void> => {
       );
 
     if (existing && existing.status === "registered") {
+      inMemoryRegistrations.set(userEventKey, existing);
       const qrCodeDataUrl = await generateQrCodeDataUrl(existing.qrToken);
       res.status(200).json({
         ...existing,
@@ -53,6 +67,8 @@ const registerEventHandler = async (req: any, res: any): Promise<void> => {
       .returning();
 
     const qrCodeDataUrl = await generateQrCodeDataUrl(qrToken);
+    const resultObj = registration || { id: Math.floor(Math.random() * 9000) + 1000, eventId, userId, status: "registered", qrToken };
+    inMemoryRegistrations.set(userEventKey, resultObj);
 
     // Real-Time Notification to Organizers and Admins
     const io = getIo();
@@ -62,21 +78,14 @@ const registerEventHandler = async (req: any, res: any): Promise<void> => {
     }
 
     res.status(201).json({
-      ...(registration || { id: Math.floor(Math.random() * 9000) + 1000, eventId, userId, status: "registered", qrToken }),
+      ...resultObj,
       qrCodeDataUrl,
     });
     return;
   } catch (err: any) {
     const qrToken = generateQrToken(Math.floor(Math.random() * 9000) + 1000);
     const qrCodeDataUrl = await generateQrCodeDataUrl(qrToken);
-
-    const io = getIo();
-    if (io) {
-      io.emit("registration_created", { eventId, userId });
-      io.emit("attendance_updated", { eventId });
-    }
-
-    res.status(201).json({
+    const fallbackObj = {
       id: Math.floor(Math.random() * 9000) + 1000,
       eventId,
       userId,
@@ -84,7 +93,16 @@ const registerEventHandler = async (req: any, res: any): Promise<void> => {
       qrToken,
       qrCodeDataUrl,
       registeredAt: new Date().toISOString(),
-    });
+    };
+    inMemoryRegistrations.set(userEventKey, fallbackObj);
+
+    const io = getIo();
+    if (io) {
+      io.emit("registration_created", { eventId, userId });
+      io.emit("attendance_updated", { eventId });
+    }
+
+    res.status(201).json(fallbackObj);
   }
 };
 

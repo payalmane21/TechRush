@@ -39,6 +39,8 @@ const getEventStatsHandler = async (req: any, res: any): Promise<void> => {
       capacity,
       totalRegistered,
       totalCheckedIn,
+      registeredCount: totalRegistered,
+      checkedInCount: totalCheckedIn,
       attendanceRate: Math.round((totalCheckedIn / (totalRegistered || 1)) * 100),
       capacityUtilization: Math.round((totalRegistered / capacity) * 100),
       recentCheckins: [
@@ -53,6 +55,8 @@ const getEventStatsHandler = async (req: any, res: any): Promise<void> => {
       capacity: 500,
       totalRegistered: 420,
       totalCheckedIn: 280,
+      registeredCount: 420,
+      checkedInCount: 280,
       attendanceRate: 67,
       capacityUtilization: 84,
     });
