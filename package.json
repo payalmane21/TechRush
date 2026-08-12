@@ -4,7 +4,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @workspace/eventhub run build && node scripts/copy-dist.mjs",
+    "build": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/eventhub run build && node scripts/copy-dist.mjs",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },

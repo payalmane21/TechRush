@@ -52,6 +52,7 @@ export default function Login() {
     if (user) {
       if (user.role === "attendee") setLocation("/dashboard/attendee");
       else if (user.role === "volunteer") setLocation("/dashboard/volunteer");
+      else if (user.role === "admin") setLocation("/dashboard/admin");
       else setLocation("/dashboard/organizer");
     }
   }, [user, setLocation]);
@@ -72,6 +73,10 @@ export default function Login() {
           title: `Welcome back, ${userData.name}!`,
           description: `Logged in successfully as ${userData.role.toUpperCase()}.`,
         });
+        if (userData.role === "attendee") setLocation("/dashboard/attendee");
+        else if (userData.role === "volunteer") setLocation("/dashboard/volunteer");
+        else if (userData.role === "admin") setLocation("/dashboard/admin");
+        else setLocation("/dashboard/organizer");
       },
     });
   };
@@ -86,6 +91,9 @@ export default function Login() {
         body: JSON.stringify({ role }),
       });
       const userData = await res.json();
+      if (!res.ok) {
+        throw new Error(userData.error || "Demo login failed");
+      }
       if (userData.token) {
         localStorage.setItem("eventhub_token", userData.token);
       }
@@ -94,13 +102,14 @@ export default function Login() {
         title: `⚡ Demo Login: ${role.toUpperCase()}`,
         description: `Signed in as ${userData.name}`,
       });
-      if (role === "attendee") setLocation("/dashboard/attendee");
-      else if (role === "volunteer") setLocation("/dashboard/volunteer");
+      if (userData.role === "attendee") setLocation("/dashboard/attendee");
+      else if (userData.role === "volunteer") setLocation("/dashboard/volunteer");
+      else if (userData.role === "admin") setLocation("/dashboard/admin");
       else setLocation("/dashboard/organizer");
-    } catch (err) {
+    } catch (err: any) {
       toast({
         title: "Demo login failed",
-        description: "Please try again.",
+        description: err?.message || "Please sign in with email and password.",
         variant: "destructive",
       });
     } finally {

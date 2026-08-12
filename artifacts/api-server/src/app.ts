@@ -68,6 +68,7 @@ app.use(
 );
 
 app.use("/api", router);
+app.use("/", router);
 
 const possiblePaths = [
   path.resolve(process.cwd(), "public"),
