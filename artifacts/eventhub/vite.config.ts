@@ -55,7 +55,6 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'wouter'],
           'vendor-charts': ['recharts'],
           'vendor-icons': ['lucide-react'],
-          'vendor-socket': ['socket.io-client'],
         },
       },
     },
