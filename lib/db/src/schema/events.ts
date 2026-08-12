@@ -40,6 +40,10 @@ export const eventsTable = pgTable("events", {
   rejectedBy: integer("rejected_by").references(() => usersTable.id),
   rejectionReason: text("rejection_reason"),
   
+  // AI Event Mascot Fields
+  mascotUrl: text("mascot_url"),
+  mascotPrompt: text("mascot_prompt"),
+  
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

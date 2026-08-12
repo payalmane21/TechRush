@@ -14,6 +14,7 @@ import {
 import { requireAuth, requireRole } from "../lib/auth";
 import { getIo } from "../lib/socket";
 import { globalEvents, globalEventPrices, addPersistentNotification, EventStoreItem } from "../lib/store";
+import { generateEventMascot } from "../lib/mascot-generator";
 
 const router: IRouter = Router();
 
@@ -196,6 +197,9 @@ router.post("/events", requireAuth, requireRole("organizer", "admin"), async (re
   // Enforce default status: DRAFT on creation
   const status: EventStoreItem["status"] = (body.status === "pending_approval" || body.status === "draft") ? body.status : "draft";
 
+  const mascotUrl = (body as any).mascotUrl ?? null;
+  const mascotPrompt = (body as any).mascotPrompt ?? null;
+
   try {
     const [event] = await db
       .insert(eventsTable)
@@ -212,6 +216,8 @@ router.post("/events", requireAuth, requireRole("organizer", "admin"), async (re
         price,
         registrationDeadline: body.registrationDeadline ? new Date(body.registrationDeadline) : null,
         status,
+        mascotUrl,
+        mascotPrompt,
       })
       .returning();
 
@@ -221,6 +227,8 @@ router.post("/events", requireAuth, requireRole("organizer", "admin"), async (re
         ...event,
         price,
         status,
+        mascotUrl: (event as any).mascotUrl ?? mascotUrl,
+        mascotPrompt: (event as any).mascotPrompt ?? mascotPrompt,
         registeredCount: 0,
         checkedInCount: 0,
         createdAt: event.createdAt.toISOString(),
@@ -251,6 +259,8 @@ router.post("/events", requireAuth, requireRole("organizer", "admin"), async (re
     price,
     registrationDeadline: body.registrationDeadline ? new Date(body.registrationDeadline).toISOString() : null,
     status,
+    mascotUrl: mascotUrl ?? undefined,
+    mascotPrompt: mascotPrompt ?? undefined,
     createdAt: new Date().toISOString(),
     registeredCount: 0,
     checkedInCount: 0,
@@ -601,6 +611,9 @@ const updateEventHandler = async (req: any, res: any): Promise<void> => {
   }
   if (body.registrationDeadline != null) found.registrationDeadline = new Date(body.registrationDeadline).toISOString();
   
+  if (body.mascotUrl != null) found.mascotUrl = body.mascotUrl;
+  if (body.mascotPrompt != null) found.mascotPrompt = body.mascotPrompt;
+
   // If an organizer is editing a rejected event, allow resetting to draft or pending_approval
   if (body.status != null) {
     found.status = body.status;
@@ -619,6 +632,8 @@ const updateEventHandler = async (req: any, res: any): Promise<void> => {
     if (body.price != null) updateValues.price = Number(body.price);
     if (body.registrationDeadline != null) updateValues.registrationDeadline = new Date(body.registrationDeadline);
     if (body.status != null) updateValues.status = body.status as any;
+    if (body.mascotUrl != null) (updateValues as any).mascotUrl = body.mascotUrl;
+    if (body.mascotPrompt != null) (updateValues as any).mascotPrompt = body.mascotPrompt;
 
     await db
       .update(eventsTable)
@@ -776,6 +791,69 @@ router.get("/events/:id/analytics", requireAuth, requireRole("organizer", "admin
     ],
     volunteerTaskCompletion: 0.85,
   });
+});
+
+/**
+ * POST /api/events/mascot/generate
+ * Generates an AI mascot proposal based on event parameters
+ */
+router.post("/events/mascot/generate", requireAuth, requireRole("organizer", "admin"), async (req, res): Promise<void> => {
+  const { title, description, category, theme, keywords } = req.body || {};
+
+  try {
+    const result = generateEventMascot({ title, description, category, theme, keywords });
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to generate AI event mascot.", details: err?.message });
+  }
+});
+
+/**
+ * POST /api/events/:id/mascot/generate
+ * Generates and saves an AI mascot to an existing event
+ */
+router.post("/events/:id/mascot/generate", requireAuth, requireRole("organizer", "admin"), async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw!, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid event ID" }); return; }
+
+  const found = findEvent(id);
+  const body = req.body || {};
+
+  const title = body.title || found?.title || "Campus Event";
+  const description = body.description || found?.description || "";
+  const category = body.category || found?.category || "Technology";
+  const theme = body.theme || "";
+  const keywords = body.keywords || [];
+
+  try {
+    const result = generateEventMascot({ title, description, category, theme, keywords });
+
+    if (found) {
+      found.mascotUrl = result.mascotUrl;
+      found.mascotPrompt = result.prompt;
+
+      try {
+        await db
+          .update(eventsTable)
+          .set({
+            mascotUrl: result.mascotUrl,
+            mascotPrompt: result.prompt,
+          } as any)
+          .where(eq(eventsTable.id, id));
+      } catch {}
+
+      getIo()?.emit("event_changed", { action: "update", event: found });
+    }
+
+    res.json({
+      ...result,
+      eventId: id,
+      event: found,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to generate mascot for event.", details: err?.message });
+  }
 });
 
 export default router;

@@ -478,8 +478,30 @@ export default function EventDetail() {
             </div>
           </div>
 
-          {/* Right Column: Registration Card */}
+          {/* Right Column: Registration Card & Mascot */}
           <div className="space-y-6">
+            
+            {/* Official AI Event Mascot Card */}
+            {(event as any).mascotUrl && (
+              <Card className="border-border/60 shadow-md rounded-3xl p-5 bg-card overflow-hidden">
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-primary/30 shadow-xs bg-muted/20 p-1">
+                    <img src={(event as any).mascotUrl} alt="Official Event Mascot" className="w-full h-full object-contain rounded-xl" />
+                  </div>
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary">Official Mascot</span>
+                    </div>
+                    <h4 className="font-bold text-sm text-foreground truncate">{event.title} Mascot</h4>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-tight">
+                      {(event as any).mascotPrompt || "Custom AI-crafted collegiate event character brand."}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Card className="border-border/60 shadow-xl rounded-3xl p-6 space-y-6 sticky top-24">
               
               <div className="space-y-2 border-b border-border pb-4">

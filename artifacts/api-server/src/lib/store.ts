@@ -21,6 +21,8 @@ export interface EventStoreItem {
   rejectedAt?: string;
   rejectedBy?: number;
   rejectionReason?: string;
+  mascotUrl?: string;
+  mascotPrompt?: string;
   createdAt: string;
   registeredCount: number;
   checkedInCount: number;
