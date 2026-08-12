@@ -31,6 +31,17 @@ export interface EventCardProps {
   };
 }
 
+const CATEGORY_DEFAULT_BANNERS: Record<string, string> = {
+  Technology: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80&w=800",
+  Cultural: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=800",
+  Sports: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&q=80&w=800",
+  Academic: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800",
+  Social: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&q=80&w=800",
+  Career: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&q=80&w=800",
+  Arts: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&q=80&w=800",
+  "Health & Wellness": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800",
+};
+
 export function EventCard({ event }: EventCardProps) {
   const [bookmarked, setBookmarked] = useState(false);
   const { toast } = useToast();
@@ -38,6 +49,11 @@ export function EventCard({ event }: EventCardProps) {
   const registered = event.registeredCount || 0;
   const seatsLeft = Math.max(0, event.capacity - registered);
   const fillPercent = Math.min(100, Math.round((registered / event.capacity) * 100));
+
+  const fallbackBanner = CATEGORY_DEFAULT_BANNERS[event.category] || CATEGORY_DEFAULT_BANNERS.Technology;
+  const bannerSrc = (event.bannerUrl && !event.bannerUrl.includes("default-event.jpg") && (event.bannerUrl.startsWith("http") || event.bannerUrl.startsWith("data:")))
+    ? event.bannerUrl
+    : fallbackBanner;
 
   const toggleBookmark = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -69,11 +85,11 @@ export function EventCard({ event }: EventCardProps) {
         {/* Banner Container */}
         <div className="aspect-[16/9] relative overflow-hidden bg-muted">
           <img
-            src={event.bannerUrl || "/default-event.jpg"}
+            src={bannerSrc}
             alt={event.title}
             className="object-cover w-full h-full group-hover:scale-103 transition-transform duration-300 ease-out"
             onError={(e) => {
-              e.currentTarget.src = "/default-event.jpg";
+              e.currentTarget.src = fallbackBanner;
             }}
           />
           
