@@ -130,6 +130,10 @@ class RealtimeSyncEngine {
     return () => this.eventListeners.delete(callback);
   }
 
+  public getSocket(): Socket | null {
+    return this.socket;
+  }
+
   public notifyMutation(action: string, payload?: any) {
     this.invalidateCaches();
     this.broadcastLocal("REALTIME_MUTATION", { action, payload });
@@ -137,3 +141,4 @@ class RealtimeSyncEngine {
 }
 
 export const realtimeSync = new RealtimeSyncEngine();
+export const socket = realtimeSync.getSocket();

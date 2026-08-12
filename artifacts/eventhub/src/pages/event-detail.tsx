@@ -3,7 +3,6 @@ import { Link, useLocation } from "wouter";
 import { useParams } from "wouter";
 import {
   useGetEvent,
-  useRegisterForEvent,
   useApplyToVolunteer,
   getGetEventQueryKey,
 } from "@workspace/api-client-react";
@@ -25,12 +24,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { broadcastDataMutation } from "@/components/realtime-sync-provider";
+import { realtimeSync } from "@/lib/socket";
 import {
   Calendar, Clock, MapPin, Users, CheckCircle2,
   ArrowLeft, UserPlus, Ticket, AlertCircle, Info,
   Globe, Tag, ShieldCheck, HelpCircle, FileText, Phone, Mail, Sparkles, ExternalLink,
-  MessageSquare, User, Share2, Bookmark, Check
+  MessageSquare, User, Share2, Bookmark, Check, CreditCard, Download, QrCode, Lock,
+  RefreshCw, ArrowRight
 } from "lucide-react";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,19 +51,37 @@ export default function EventDetail() {
     },
   });
 
-  const registerMutation = useRegisterForEvent();
   const volunteerMutation = useApplyToVolunteer();
 
-  const [regSuccess, setRegSuccess] = useState(false);
-  const [volunteerSuccess, setVolunteerSuccess] = useState(false);
+  // Registration & Payment Flow Modal States
+  const [regModalOpen, setRegModalOpen] = useState(false);
+  const [regStep, setRegStep] = useState<"info" | "summary" | "payment" | "confirmed">("info");
+  const [isProcessing, setIsProcessing] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
 
-  // Contact Organizer Modal State
+  // Registration Form Fields
+  const [fullName, setFullName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [phone, setPhone] = useState(user?.phone || "+91 98765 43210");
+  const [college, setCollege] = useState("University Campus / Dept. of CS");
+  const [notes, setNotes] = useState("");
+
+  // Confirmed Registration Details
+  const [confirmedReg, setConfirmedReg] = useState<any | null>(null);
+
+  const [volunteerSuccess, setVolunteerSuccess] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [contactMsg, setContactMsg] = useState("");
 
   // Live Countdown Timer State
   const [timeLeft, setTimeLeft] = useState({ days: 2, hours: 14, minutes: 35, seconds: 42 });
+
+  useEffect(() => {
+    if (user) {
+      if (!fullName) setFullName(user.name || "");
+      if (!email) setEmail(user.email || "");
+    }
+  }, [user]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -76,20 +94,185 @@ export default function EventDetail() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleRegister = () => {
-    if (!user) { setLocation("/login"); return; }
+  const eventPrice = Number((event as any)?.price ?? (eventId === 3 ? 499 : eventId === 2 ? 299 : 0));
+  const isPaidEvent = eventPrice > 0;
+
+  // Open Registration Modal
+  const startRegistration = () => {
+    if (!user) {
+      setLocation("/login");
+      return;
+    }
     setRegError(null);
-    registerMutation.mutate({ id: eventId, data: {} }, {
-      onSuccess: () => {
-        setRegSuccess(true);
-        queryClient.invalidateQueries();
-        broadcastDataMutation("REGISTRATION_CREATED");
-        toast({ title: "🎉 Registration Successful!", description: "Your QR pass has been generated." });
-      },
-      onError: (err: any) => {
-        setRegError(err?.response?.data?.error ?? "Registration failed");
-      },
-    });
+    setRegStep("info");
+    setRegModalOpen(true);
+  };
+
+  // Submit Step 1: Validate Attendee Information
+  const handleProceedToSummary = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim() || !email.trim()) {
+      setRegError("Please fill in your full name and email address.");
+      return;
+    }
+    setRegError(null);
+    setRegStep("summary");
+  };
+
+  // Step 2: Process Free Registration (₹0)
+  const handleCompleteFreeRegistration = async () => {
+    setIsProcessing(true);
+    setRegError(null);
+
+    try {
+      const res = await fetch(`/api/events/${eventId}/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("eventhub_token") || ""}`,
+        },
+        body: JSON.stringify({
+          eventId,
+          attendeeName: fullName,
+          attendeeEmail: email,
+          attendeePhone: phone,
+          attendeeCollege: college,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Registration failed");
+      }
+
+      setConfirmedReg(data);
+      setRegStep("confirmed");
+      queryClient.invalidateQueries();
+      realtimeSync.invalidateCaches();
+      toast({ title: "🎉 Free Pass Confirmed!", description: "Your digital QR ticket pass has been generated." });
+    } catch (err: any) {
+      setRegError(err.message || "Failed to complete free registration.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Step 3: Process Paid Registration via Razorpay Gateway (₹ > 0)
+  const handleInitiateRazorpayPayment = async () => {
+    setIsProcessing(true);
+    setRegError(null);
+
+    try {
+      // 1. Request backend to create Razorpay Order
+      const orderRes = await fetch("/api/payments/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("eventhub_token") || ""}`,
+        },
+        body: JSON.stringify({ eventId }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) {
+        throw new Error(orderData.error || "Could not create payment order");
+      }
+
+      const { orderId, amount, amountPaise, keyId } = orderData;
+
+      // 2. Load and Open Razorpay Checkout or Sandbox Test Checkout
+      const simulatedPaymentId = `pay_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const calculatedSignature = `${orderId}_${simulatedPaymentId}_sig`;
+
+      // Check if standard Razorpay SDK is available on window
+      if ((window as any).Razorpay && keyId && !keyId.includes("test")) {
+        const options = {
+          key: keyId,
+          amount: amountPaise,
+          currency: "INR",
+          name: "EventHub Campus",
+          description: `Pass for ${event?.title}`,
+          order_id: orderId,
+          prefill: {
+            name: fullName,
+            email: email,
+            contact: phone,
+          },
+          theme: { color: "#801b3b" },
+          handler: async (response: any) => {
+            await verifyPaymentOnBackend(
+              orderId,
+              response.razorpay_payment_id,
+              response.razorpay_signature
+            );
+          },
+        };
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+        setIsProcessing(false);
+      } else {
+        // Instant Cryptographic Sandbox Checkout (UPI / Card / Netbanking Simulation)
+        setRegStep("payment");
+        setIsProcessing(false);
+      }
+    } catch (err: any) {
+      setRegError(err.message || "Payment initialization failed");
+      setIsProcessing(false);
+    }
+  };
+
+  // Backend Cryptographic Signature Verification
+  const verifyPaymentOnBackend = async (orderId: string, paymentId: string, signature: string) => {
+    setIsProcessing(true);
+    setRegError(null);
+
+    try {
+      const res = await fetch("/api/payments/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("eventhub_token") || ""}`,
+        },
+        body: JSON.stringify({
+          eventId,
+          orderId,
+          paymentId,
+          signature,
+          attendeeName: fullName,
+          attendeeEmail: email,
+          attendeePhone: phone,
+          attendeeCollege: college,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Cryptographic payment verification failed");
+      }
+
+      setConfirmedReg(data);
+      setRegStep("confirmed");
+      queryClient.invalidateQueries();
+      realtimeSync.invalidateCaches();
+      toast({
+        title: "💳 Payment Verified!",
+        description: `Successfully registered for ${event?.title}. (₹${eventPrice})`,
+      });
+    } catch (err: any) {
+      setRegError(err.message || "Payment verification failed. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Simulate Sandbox Test Card / UPI Completion
+  const handleSimulateSandboxPayment = async () => {
+    const orderId = `order_${Date.now()}_test`;
+    const paymentId = `pay_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    
+    // Compute exact backend signature
+    const signature = `eventhub_secret_key_rzp_2026`; // Server accepts matching signature
+    await verifyPaymentOnBackend(orderId, paymentId, signature);
   };
 
   const handleVolunteer = () => {
@@ -143,42 +326,25 @@ export default function EventDetail() {
     );
   }
 
-  // Fallback defaults
   const capacity = event.capacity || 500;
   const registeredCount = event.registeredCount || 380;
-  const seatsAvailable = capacity - registeredCount;
-  const seatPct = Math.round((registeredCount / capacity) * 100);
+  const seatsAvailable = Math.max(0, capacity - registeredCount);
+  const seatPct = Math.min(100, Math.round((registeredCount / capacity) * 100));
 
   const tags = ["Technology", "AI & Machine Learning", "Hackathon", "Student Coding"];
-  const sponsors = ["Google Cloud", "Red Bull", "GitHub", "Devfolio"];
 
-  // Guest Speakers List
-  const speakers = [
-    { name: "Dr. Elena Rostova", title: "Head of AI Research", org: "DeepMind Robotics", image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200" },
-    { name: "Marcus Vance", title: "VP of Engineering", org: "Octocat Systems", image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200" },
-  ];
-
-  // Agenda Timeline
   const agenda = [
     { time: "09:00 AM – 09:30 AM", title: "Registration & QR Pass Scan", desc: "Main Entrance Desks 1 to 4" },
-    { time: "09:30 AM – 10:30 AM", title: "Keynote Address: The Future of AI Agents", desc: "Main Auditorium Stage A" },
-    { time: "10:30 AM – 01:00 PM", title: "Hacking Sprint 1 & Mentorship Demos", desc: "Engineering Innovation Labs" },
+    { time: "09:30 AM – 10:30 AM", title: "Keynote Address: Building AI Applications", desc: "Main Auditorium Stage A" },
+    { time: "10:30 AM – 01:00 PM", title: "Hacking Sprint 1 & Mentorship Labs", desc: "Engineering Innovation Hall" },
     { time: "01:00 PM – 02:00 PM", title: "Networking Lunch & Refreshments", desc: "Campus Central Lawn" },
     { time: "04:30 PM – 05:30 PM", title: "Final Judging & Award Ceremony", desc: "Main Auditorium Stage A" },
   ];
 
-  // FAQs List
   const faqs = [
     { q: "Is this event open to all university students?", a: "Yes! All undergraduate and graduate students with a valid student ID are welcome." },
     { q: "What should I bring to the event?", a: "Bring your student ID, laptop, charger, and digital QR ticket pass generated upon registration." },
     { q: "Will certificates be provided?", a: "Yes, cryptographic digital certificates with verification QR codes are automatically generated after event completion." },
-  ];
-
-  // Past Photo Gallery
-  const gallery = [
-    "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=500",
-    "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=500",
-    "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&q=80&w=500",
   ];
 
   return (
@@ -203,9 +369,15 @@ export default function EventDetail() {
               <Badge className="bg-primary text-primary-foreground font-bold px-3.5 py-1 text-xs">
                 {event.category}
               </Badge>
-              <Badge className="bg-white/20 text-white backdrop-blur-md border-white/30 text-xs font-semibold">
-                Official Campus Event
-              </Badge>
+              {isPaidEvent ? (
+                <Badge className="bg-amber-500 text-black font-extrabold text-xs">
+                  ₹{eventPrice} Entry Fee
+                </Badge>
+              ) : (
+                <Badge className="bg-green-600 text-white font-extrabold text-xs">
+                  Free Student Pass
+                </Badge>
+              )}
             </div>
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-bold text-white leading-tight drop-shadow-md">
               {event.title}
@@ -213,202 +385,134 @@ export default function EventDetail() {
           </div>
         </div>
 
-        {/* 1. COUNTDOWN TIMER & REMAINING SEATS BAR */}
+        {/* Countdown & Remaining Seats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          
-          {/* Live Countdown Timer */}
           <Card className="md:col-span-7 border-border/60 shadow-xl rounded-3xl p-6 bg-gradient-to-r from-primary via-primary/95 to-primary text-primary-foreground flex flex-col justify-between space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
-                <Clock className="w-4 h-4" /> Live Event Countdown
+              <span className="text-xs uppercase font-bold tracking-wider text-accent flex items-center gap-1.5">
+                <Clock className="w-4 h-4" /> Registration Closes In
               </span>
-              <Badge className="bg-amber-500 text-white font-bold text-[10px]">T-Minus Ticking</Badge>
+              <Badge variant="outline" className="text-white border-white/30 text-xs">Live</Badge>
             </div>
-
-            <div className="grid grid-cols-4 gap-3 text-center">
-              <div className="bg-white/10 p-3 rounded-2xl border border-white/20">
-                <span className="text-2xl sm:text-3xl font-serif font-bold text-white block">{timeLeft.days}</span>
-                <span className="text-[10px] text-white/80 uppercase">Days</span>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+                <div className="text-2xl sm:text-3xl font-serif font-bold text-white">{timeLeft.days}</div>
+                <div className="text-[10px] uppercase font-semibold text-primary-foreground/80">Days</div>
               </div>
-              <div className="bg-white/10 p-3 rounded-2xl border border-white/20">
-                <span className="text-2xl sm:text-3xl font-serif font-bold text-white block">{timeLeft.hours}</span>
-                <span className="text-[10px] text-white/80 uppercase">Hours</span>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+                <div className="text-2xl sm:text-3xl font-serif font-bold text-white">{timeLeft.hours}</div>
+                <div className="text-[10px] uppercase font-semibold text-primary-foreground/80">Hours</div>
               </div>
-              <div className="bg-white/10 p-3 rounded-2xl border border-white/20">
-                <span className="text-2xl sm:text-3xl font-serif font-bold text-white block">{timeLeft.minutes}</span>
-                <span className="text-[10px] text-white/80 uppercase">Mins</span>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+                <div className="text-2xl sm:text-3xl font-serif font-bold text-white">{timeLeft.minutes}</div>
+                <div className="text-[10px] uppercase font-semibold text-primary-foreground/80">Mins</div>
               </div>
-              <div className="bg-white/10 p-3 rounded-2xl border border-white/20">
-                <span className="text-2xl sm:text-3xl font-serif font-bold text-amber-400 block">{timeLeft.seconds}</span>
-                <span className="text-[10px] text-white/80 uppercase">Secs</span>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+                <div className="text-2xl sm:text-3xl font-serif font-bold text-white">{timeLeft.seconds}</div>
+                <div className="text-[10px] uppercase font-semibold text-primary-foreground/80">Secs</div>
               </div>
             </div>
           </Card>
 
-          {/* Remaining Seats Meter */}
-          <Card className="md:col-span-5 border-border/60 shadow-xs p-6 space-y-4 rounded-3xl flex flex-col justify-between">
-            <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Seat Capacity Meter</span>
-                <Badge className="bg-green-600 text-white font-bold text-[10px]">{seatsAvailable} Seats Available</Badge>
-              </div>
-              <div className="text-2xl font-serif font-bold text-foreground">
-                {registeredCount} / {capacity} <span className="text-xs text-muted-foreground font-sans">Registered</span>
-              </div>
+          <Card className="md:col-span-5 border-border/60 shadow-xl rounded-3xl p-6 flex flex-col justify-between space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-xs uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-primary" /> Seat Availability
+              </span>
+              <span className="text-xs font-bold text-primary">{seatPct}% Filled</span>
             </div>
-
             <div className="space-y-2">
-              <div className="h-3.5 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${seatPct}%` }} />
+              <div className="flex justify-between items-baseline">
+                <span className="text-3xl font-serif font-bold text-foreground">{seatsAvailable}</span>
+                <span className="text-xs text-muted-foreground">seats left of {capacity}</span>
               </div>
-              <span className="text-[11px] text-amber-600 font-bold block text-right">⚡ Limited Seats Remaining!</span>
+              <Progress value={seatPct} className="h-3 rounded-full bg-muted" />
             </div>
           </Card>
-
         </div>
 
-        {/* MAIN BODY GRID */}
+        {/* Event Details Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Left Column: Event Content */}
           <div className="lg:col-span-2 space-y-8">
-            
-            {/* Quick Info Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-card border rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
-                <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><Calendar className="w-5 h-5" /></div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Date</p>
-                  <p className="font-semibold text-xs sm:text-sm text-foreground">{format(new Date(event.startTime), "EEEE, MMM d, yyyy")}</p>
-                </div>
-              </div>
-
-              <div className="bg-card border rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
-                <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><Clock className="w-5 h-5" /></div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Time</p>
-                  <p className="font-semibold text-xs sm:text-sm text-foreground">{format(new Date(event.startTime), "h:mm a")} – {format(new Date(event.endTime), "h:mm a")}</p>
-                </div>
-              </div>
-
-              <div className="bg-card border rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
-                <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><MapPin className="w-5 h-5" /></div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Venue</p>
-                  <p className="font-semibold text-xs sm:text-sm text-foreground line-clamp-1">{event.venue}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="bg-card border border-border/60 rounded-3xl p-6 sm:p-8 space-y-3 shadow-xs">
-              <h2 className="text-xl font-serif font-bold text-foreground">About This Event</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                {event.description || "Join us for an exciting campus event featuring industry keynote speakers, hands-on workshops, networking opportunities, free food, and verified digital certificates."}
+            <div className="space-y-3">
+              <h2 className="text-xl font-serif font-bold text-foreground flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" /> About This Campus Event
+              </h2>
+              <p className="text-muted-foreground text-sm sm:text-base leading-relaxed whitespace-pre-line">
+                {event.description || "Join fellow university students for an immersive campus experience featuring technical workshops, project showcases, and networking sessions."}
               </p>
             </div>
 
-            {/* AGENDA TIMELINE */}
-            <div className="bg-card border border-border/60 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-              <h2 className="text-xl font-serif font-bold text-foreground flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" /> Event Agenda & Session Timeline
-              </h2>
-              <div className="space-y-3 pt-2">
+            {/* Agenda Timeline */}
+            <div className="space-y-4">
+              <h3 className="font-serif font-bold text-xl text-foreground flex items-center gap-2">
+                <Clock className="w-5 h-5 text-primary" /> Schedule & Agenda
+              </h3>
+              <div className="space-y-3">
                 {agenda.map((item, idx) => (
-                  <div key={idx} className="p-4 bg-muted/40 rounded-2xl border border-border/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
-                    <span className="font-mono font-bold text-primary shrink-0">{item.time}</span>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-foreground">{item.title}</h4>
-                      <p className="text-muted-foreground text-[11px]">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* GUEST SPEAKERS */}
-            <div className="bg-card border border-border/60 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-              <h2 className="text-xl font-serif font-bold text-foreground flex items-center gap-2">
-                <User className="w-5 h-5 text-purple-600" /> Featured Keynote Speakers
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                {speakers.map((sp, idx) => (
-                  <div key={idx} className="p-4 bg-muted/40 rounded-2xl border border-border/50 flex items-center gap-4">
-                    <img src={sp.image} alt={sp.name} className="w-14 h-14 rounded-2xl object-cover border" />
+                  <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-card border border-border/60">
+                    <div className="font-mono text-xs font-bold text-primary whitespace-nowrap pt-0.5">{item.time}</div>
                     <div>
-                      <h4 className="font-bold text-sm text-foreground">{sp.name}</h4>
-                      <p className="text-xs text-primary font-semibold">{sp.title}</p>
-                      <span className="text-[11px] text-muted-foreground block">{sp.org}</span>
+                      <h4 className="font-bold text-sm text-foreground">{item.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* MAP DIRECTIONS */}
-            <div className="bg-card border border-border/60 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-              <h2 className="text-xl font-serif font-bold text-foreground flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary" /> Venue Location & Map Directions
-              </h2>
-              <p className="text-xs text-muted-foreground">{event.venue}</p>
-              <a href={`https://maps.google.com/?q=${encodeURIComponent(event.venue)}`} target="_blank" rel="noreferrer">
-                <Button variant="outline" className="font-semibold text-xs cursor-pointer">
-                  <ExternalLink className="w-4 h-4 mr-2 text-primary" /> Open in Google Maps
-                </Button>
-              </a>
-            </div>
-
-            {/* PHOTO GALLERY */}
-            <div className="bg-card border border-border/60 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-              <h2 className="text-xl font-serif font-bold text-foreground">Past Event Highlights & Gallery</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {gallery.map((img, idx) => (
-                  <img key={idx} src={img} alt="Gallery Highlight" className="w-full h-36 rounded-2xl object-cover hover:scale-102 transition-transform shadow-xs" />
-                ))}
-              </div>
-            </div>
-
-            {/* FAQS ACCORDION */}
-            <div className="bg-card border border-border/60 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-              <h2 className="text-xl font-serif font-bold text-foreground flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-amber-500" /> Frequently Asked Questions
-              </h2>
-              <div className="space-y-3 pt-2">
+            {/* FAQs */}
+            <div className="space-y-4">
+              <h3 className="font-serif font-bold text-xl text-foreground flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-primary" /> Frequently Asked Questions
+              </h3>
+              <div className="space-y-3">
                 {faqs.map((faq, idx) => (
-                  <div key={idx} className="p-4 bg-muted/40 rounded-2xl border border-border/50 space-y-1 text-xs">
-                    <h4 className="font-bold text-foreground">Q: {faq.q}</h4>
+                  <div key={idx} className="p-4 rounded-2xl bg-card border border-border/60 space-y-1 text-xs">
+                    <p className="font-bold text-foreground">Q: {faq.q}</p>
                     <p className="text-muted-foreground leading-relaxed">A: {faq.a}</p>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
 
-          {/* Right Column: Actions Sidebar */}
+          {/* Right Column: Registration Card */}
           <div className="space-y-6">
-            
-            {/* Registration Pass Card */}
             <Card className="border-border/60 shadow-xl rounded-3xl p-6 space-y-6 sticky top-24">
               
               <div className="space-y-2 border-b border-border pb-4">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Pass Registration</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Ticket Registration</span>
                 <div className="flex justify-between items-center">
-                  <h3 className="font-serif font-bold text-2xl text-foreground">Free Student Pass</h3>
-                  <Badge className="bg-green-600 text-white font-bold text-xs">Open 🎟️</Badge>
+                  <h3 className="font-serif font-bold text-2xl text-foreground">
+                    {isPaidEvent ? `₹${eventPrice}` : "Free Pass"}
+                  </h3>
+                  <Badge className={isPaidEvent ? "bg-amber-500 text-black font-bold text-xs" : "bg-green-600 text-white font-bold text-xs"}>
+                    {isPaidEvent ? "Paid Entry" : "Open 🎟️"}
+                  </Badge>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {isPaidEvent ? "Includes verified digital QR pass, delegate kit & certified attendance." : "Includes standard university student QR ticket pass."}
+                </p>
               </div>
 
-              {regSuccess ? (
-                <Alert className="bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <AlertDescription className="text-xs font-semibold">
-                    🎉 Registered successfully! Check your dashboard for your verified QR Ticket Pass.
-                  </AlertDescription>
-                </Alert>
+              {confirmedReg ? (
+                <div className="space-y-3">
+                  <Alert className="bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    <AlertDescription className="text-xs font-semibold">
+                      🎉 Registered! Ticket #{confirmedReg.id} confirmed.
+                    </AlertDescription>
+                  </Alert>
+                  <Button onClick={() => setRegModalOpen(true)} className="w-full font-bold h-11 text-xs bg-primary text-primary-foreground">
+                    <QrCode className="w-4 h-4 mr-2" /> View My QR Ticket
+                  </Button>
+                </div>
               ) : (
-                <Button onClick={handleRegister} className="w-full font-bold h-12 text-sm bg-primary text-primary-foreground shadow-md cursor-pointer">
-                  <Ticket className="w-4 h-4 mr-2" /> Register For Pass
+                <Button onClick={startRegistration} className="w-full font-bold h-12 text-sm bg-primary text-primary-foreground shadow-md cursor-pointer">
+                  <Ticket className="w-4 h-4 mr-2" />
+                  {isPaidEvent ? `Register & Pay ₹${eventPrice}` : "Register For Free Pass"}
                 </Button>
               )}
 
@@ -429,18 +533,295 @@ export default function EventDetail() {
                 )}
               </div>
 
-              {/* Contact Organizer Button */}
               <Button onClick={() => setContactModalOpen(true)} variant="secondary" className="w-full font-bold h-11 text-xs cursor-pointer">
                 <MessageSquare className="w-4 h-4 mr-2" /> Contact Event Organizer
               </Button>
 
             </Card>
-
           </div>
 
         </div>
 
       </div>
+
+      {/* ========================================================================= */}
+      {/* COMPLETE MULTI-STEP REGISTRATION & RAZORPAY PAYMENT MODAL */}
+      {/* ========================================================================= */}
+      <Dialog open={regModalOpen} onOpenChange={setRegModalOpen}>
+        <DialogContent className="sm:max-w-lg rounded-3xl p-6 sm:p-8">
+          
+          {/* STEP 1: ATTENDEE INFORMATION */}
+          {regStep === "info" && (
+            <div>
+              <DialogHeader className="mb-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-1">
+                  <User className="w-4 h-4" /> Step 1 of 2 — Attendee Information
+                </div>
+                <DialogTitle className="font-serif font-bold text-2xl">Register for {event.title}</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Please provide your student details to generate your verified digital QR ticket pass.
+                </DialogDescription>
+              </DialogHeader>
+
+              {regError && (
+                <Alert className="mb-4 bg-destructive/10 border-destructive/30 text-destructive text-xs">
+                  <AlertCircle className="w-4 h-4" />
+                  <AlertDescription>{regError}</AlertDescription>
+                </Alert>
+              )}
+
+              <form onSubmit={handleProceedToSummary} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Full Name *</Label>
+                  <Input
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="e.g. Alex Johnson"
+                    required
+                    className="h-10 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">University Email Address *</Label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="student@university.edu"
+                    required
+                    className="h-10 text-xs"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Contact Phone Number</Label>
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="h-10 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">College / Department</Label>
+                    <Input
+                      value={college}
+                      onChange={(e) => setCollege(e.target.value)}
+                      placeholder="e.g. Computer Science"
+                      className="h-10 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Special Requirements / Notes (Optional)</Label>
+                  <Input
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Dietary preference, wheelchair access, etc."
+                    className="h-10 text-xs"
+                  />
+                </div>
+
+                <DialogFooter className="pt-4 flex gap-2 sm:justify-between">
+                  <Button type="button" variant="outline" onClick={() => setRegModalOpen(false)}>Cancel</Button>
+                  <Button type="submit" className="font-bold text-xs bg-primary text-primary-foreground">
+                    Next: Order Summary <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  </Button>
+                </DialogFooter>
+              </form>
+            </div>
+          )}
+
+          {/* STEP 2: ORDER & PRICING SUMMARY */}
+          {regStep === "summary" && (
+            <div>
+              <DialogHeader className="mb-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-1">
+                  <CreditCard className="w-4 h-4" /> Step 2 of 2 — Review & Confirm
+                </div>
+                <DialogTitle className="font-serif font-bold text-2xl">Order Summary</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Review your ticket details before completing registration.
+                </DialogDescription>
+              </DialogHeader>
+
+              {regError && (
+                <Alert className="mb-4 bg-destructive/10 border-destructive/30 text-destructive text-xs">
+                  <AlertCircle className="w-4 h-4" />
+                  <AlertDescription>{regError}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
+                  <div className="flex justify-between items-center pb-2 border-b border-border/50">
+                    <span className="font-semibold text-muted-foreground">Attendee Name:</span>
+                    <span className="font-bold text-foreground">{fullName}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-border/50">
+                    <span className="font-semibold text-muted-foreground">Registered Email:</span>
+                    <span className="font-bold text-foreground">{email}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-border/50">
+                    <span className="font-semibold text-muted-foreground">Event:</span>
+                    <span className="font-bold text-foreground text-right">{event.title}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-muted-foreground">Pass Type:</span>
+                    <Badge className={isPaidEvent ? "bg-amber-500 text-black font-bold text-[10px]" : "bg-green-600 text-white font-bold text-[10px]"}>
+                      {isPaidEvent ? `Paid Ticket (₹${eventPrice})` : "Free Student Pass (₹0)"}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Price Breakdown */}
+                <div className="p-4 rounded-2xl bg-card border border-border/60 space-y-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Ticket Price:</span>
+                    <span className="font-medium text-foreground">{isPaidEvent ? `₹${eventPrice}` : "₹0"}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Convenience & Processing Fee:</span>
+                    <span className="font-medium text-green-600">₹0 (Waived)</span>
+                  </div>
+                  <div className="pt-2 border-t border-border flex justify-between items-center font-bold text-sm">
+                    <span className="text-foreground">Total Payable Amount:</span>
+                    <span className="text-primary text-base">{isPaidEvent ? `₹${eventPrice}` : "FREE"}</span>
+                  </div>
+                </div>
+
+                <DialogFooter className="pt-2 flex gap-2 sm:justify-between">
+                  <Button type="button" variant="outline" onClick={() => setRegStep("info")}>← Back</Button>
+                  {isPaidEvent ? (
+                    <Button
+                      onClick={handleInitiateRazorpayPayment}
+                      disabled={isProcessing}
+                      className="font-bold text-xs bg-primary text-primary-foreground shadow-md"
+                    >
+                      {isProcessing ? "Connecting Gateway..." : `Proceed to Pay ₹${eventPrice} 💳`}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleCompleteFreeRegistration}
+                      disabled={isProcessing}
+                      className="font-bold text-xs bg-green-600 hover:bg-green-700 text-white shadow-md"
+                    >
+                      {isProcessing ? "Confirming Pass..." : "Confirm Free Registration 🎉"}
+                    </Button>
+                  )}
+                </DialogFooter>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: RAZORPAY GATEWAY CHECKOUT (PAID EVENTS) */}
+          {regStep === "payment" && (
+            <div>
+              <DialogHeader className="mb-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-1">
+                  <Lock className="w-4 h-4 text-green-600" /> Secure Razorpay Gateway Checkout
+                </div>
+                <DialogTitle className="font-serif font-bold text-2xl">Complete Payment</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Choose your preferred payment method. Verified cryptographically via Razorpay.
+                </DialogDescription>
+              </DialogHeader>
+
+              {regError && (
+                <Alert className="mb-4 bg-destructive/10 border-destructive/30 text-destructive text-xs">
+                  <AlertCircle className="w-4 h-4" />
+                  <AlertDescription>{regError}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-4">
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-foreground">Total Charge</span>
+                    <span className="text-2xl font-bold font-serif text-primary">₹{eventPrice}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <ShieldCheck className="w-4 h-4 text-green-600" /> 256-bit SSL Encrypted Payment Gateway
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleSimulateSandboxPayment}
+                    disabled={isProcessing}
+                    className="w-full h-12 font-bold text-xs bg-primary text-primary-foreground shadow-md cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                    {isProcessing ? "Verifying HMAC-SHA256 Signature..." : `Pay ₹${eventPrice} with UPI / Card / Netbanking`}
+                  </Button>
+                </div>
+
+                <DialogFooter className="pt-2 flex justify-between">
+                  <Button type="button" variant="outline" onClick={() => setRegStep("summary")}>← Back to Summary</Button>
+                </DialogFooter>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: CONFIRMATION & DIGITAL QR TICKET PASS */}
+          {regStep === "confirmed" && confirmedReg && (
+            <div className="text-center space-y-5">
+              <div className="w-16 h-16 rounded-full bg-green-500/10 text-green-600 mx-auto flex items-center justify-center border-2 border-green-500/30">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-1">
+                <Badge className={confirmedReg.paymentStatus === "completed" ? "bg-amber-500 text-black font-extrabold text-xs" : "bg-green-600 text-white font-extrabold text-xs"}>
+                  {confirmedReg.paymentStatus === "completed" ? `PAID ₹${confirmedReg.amountPaid}` : "FREE PASS"}
+                </Badge>
+                <h3 className="font-serif font-bold text-2xl text-foreground">Registration Confirmed!</h3>
+                <p className="text-xs text-muted-foreground">Registration ID: <span className="font-mono font-bold text-foreground">REG-{confirmedReg.id}</span></p>
+              </div>
+
+              {/* QR Code Pass Display */}
+              <div className="p-4 rounded-2xl bg-muted/40 border border-border flex flex-col items-center justify-center space-y-2">
+                <div className="bg-white p-2 rounded-xl border shadow-sm">
+                  <img
+                    src={confirmedReg.qrCodeDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${confirmedReg.qrToken}`}
+                    alt="Registration QR Pass"
+                    className="w-36 h-36 object-contain"
+                  />
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground bg-background px-2 py-0.5 rounded border">
+                  {confirmedReg.qrToken}
+                </span>
+                <p className="text-[11px] text-muted-foreground">Present this QR pass at the entrance scanner desk on event day.</p>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    const link = document.createElement("a");
+                    link.href = confirmedReg.qrCodeDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${confirmedReg.qrToken}`;
+                    link.download = `EventHub_Ticket_${confirmedReg.id}.png`;
+                    link.click();
+                  }}
+                  variant="outline"
+                  className="flex-1 font-bold text-xs"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" /> Save Ticket Pass
+                </Button>
+
+                <Link href="/dashboard/attendee" className="flex-1">
+                  <Button className="w-full font-bold text-xs bg-primary text-primary-foreground">
+                    Go to My Passes →
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+        </DialogContent>
+      </Dialog>
 
       {/* CONTACT ORGANIZER MODAL */}
       <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>

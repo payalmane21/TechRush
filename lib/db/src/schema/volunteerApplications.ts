@@ -6,7 +6,7 @@ import { eventsTable } from "./events";
 
 export const volunteerApplicationStatusEnum = pgEnum(
   "volunteer_application_status",
-  ["pending", "approved", "rejected"],
+  ["pending", "applied", "shortlisted", "assigned", "approved", "rejected", "withdrawn", "completed"],
 );
 
 export const volunteerApplicationsTable = pgTable("volunteer_applications", {
@@ -17,14 +17,31 @@ export const volunteerApplicationsTable = pgTable("volunteer_applications", {
   userId: integer("user_id")
     .notNull()
     .references(() => usersTable.id),
-  status: volunteerApplicationStatusEnum("status").notNull().default("pending"),
+  fullName: text("full_name"),
+  email: text("email"),
+  phone: text("phone"),
+  skills: text("skills"),
+  experience: text("experience"),
+  interests: text("interests"),
+  preferredRoles: text("preferred_roles"),
+  availability: text("availability"),
+  resumeUrl: text("resume_url"),
+  resumeText: text("resume_text"),
+  status: text("status").notNull().default("applied"),
+  assignedRole: text("assigned_role"),
+  matchScore: integer("match_score").default(0),
+  matchReason: text("match_reason"),
+  matchingSkills: text("matching_skills"),
+  skillGaps: text("skill_gaps"),
   message: text("message"),
   appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const insertVolunteerApplicationSchema = createInsertSchema(
   volunteerApplicationsTable,
-).omit({ id: true, appliedAt: true });
+).omit({ id: true, appliedAt: true, updatedAt: true });
+
 export type InsertVolunteerApplication = z.infer<
   typeof insertVolunteerApplicationSchema
 >;

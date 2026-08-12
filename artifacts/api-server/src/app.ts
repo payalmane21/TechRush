@@ -69,18 +69,34 @@ app.use(
 
 app.use("/api", router);
 
-const staticPath = fs.existsSync(path.resolve(import.meta.dirname, "../../eventhub/public"))
-  ? path.resolve(import.meta.dirname, "../../eventhub/public")
-  : fs.existsSync(path.resolve(import.meta.dirname, "../../eventhub/dist"))
-  ? path.resolve(import.meta.dirname, "../../eventhub/dist")
-  : path.resolve(import.meta.dirname, "../../eventhub/dist/public");
+const possiblePaths = [
+  path.resolve(process.cwd(), "public"),
+  path.resolve(process.cwd(), "artifacts/eventhub/dist"),
+  path.resolve(import.meta.dirname, "../../../public"),
+  path.resolve(import.meta.dirname, "../../eventhub/dist"),
+  path.resolve(import.meta.dirname, "../../eventhub/public"),
+];
+
+const staticPath =
+  possiblePaths.find((p) => fs.existsSync(path.resolve(p, "index.html"))) ||
+  possiblePaths.find((p) => fs.existsSync(p)) ||
+  path.resolve(process.cwd(), "public");
 
 if (fs.existsSync(staticPath)) {
-  app.use(express.static(staticPath));
+  app.use(
+    express.static(staticPath, {
+      setHeaders(res, filePath) {
+        if (filePath.endsWith(".html")) {
+          res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        }
+      },
+    }),
+  );
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     const indexHtml = path.resolve(staticPath, "index.html");
     if (fs.existsSync(indexHtml)) {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
       res.sendFile(indexHtml);
     } else {
       next();

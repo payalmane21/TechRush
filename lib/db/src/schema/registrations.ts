@@ -10,6 +10,14 @@ export const registrationStatusEnum = pgEnum("registration_status", [
   "cancelled",
 ]);
 
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "free",
+  "pending",
+  "completed",
+  "failed",
+  "refunded",
+]);
+
 export const registrationsTable = pgTable("registrations", {
   id: serial("id").primaryKey(),
   eventId: integer("event_id")
@@ -18,7 +26,14 @@ export const registrationsTable = pgTable("registrations", {
   userId: integer("user_id")
     .notNull()
     .references(() => usersTable.id),
+  attendeeName: text("attendee_name"),
+  attendeeEmail: text("attendee_email"),
+  attendeePhone: text("attendee_phone"),
+  attendeeCollege: text("attendee_college"),
   status: registrationStatusEnum("status").notNull().default("registered"),
+  paymentStatus: paymentStatusEnum("payment_status").notNull().default("free"),
+  amountPaid: integer("amount_paid").notNull().default(0), // in INR
+  paymentId: text("payment_id"),
   qrToken: text("qr_token").notNull().unique(),
   checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
   checkedOutAt: timestamp("checked_out_at", { withTimezone: true }),

@@ -183,6 +183,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     if (decoded) {
       req.session.userId = decoded.id;
       req.session.userRole = decoded.role;
+      (req.session as any).role = decoded.role;
       return next();
     }
   }
@@ -206,14 +207,16 @@ export function requireRole(...roles: string[]) {
       if (decoded) {
         req.session.userId = decoded.id;
         req.session.userRole = decoded.role;
+        (req.session as any).role = decoded.role;
       }
     }
 
+    const currentRole = req.session.userRole || (req.session as any).role;
     if (!req.session?.userId) {
       res.status(401).json({ error: "Authentication required. Please log in." });
       return;
     }
-    if (!req.session.userRole || !roles.includes(req.session.userRole)) {
+    if (!currentRole || !roles.includes(currentRole)) {
       res.status(403).json({ error: "Access denied. Required role: " + roles.join(" or ") });
       return;
     }

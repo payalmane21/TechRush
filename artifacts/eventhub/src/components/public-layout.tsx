@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -29,10 +29,14 @@ import {
   Moon,
   Search as SearchIcon,
   Settings as SettingsIcon,
-  User
+  User,
+  CreditCard
 } from "lucide-react";
 import { useAuthLogout } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+
+import { format } from "date-fns";
+import { socket } from "@/lib/socket";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { user, logout: localLogout } = useAuth();
@@ -43,6 +47,46 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+
+  // Live Persistent Notifications State
+  const [liveNotifications, setLiveNotifications] = useState<any[]>([
+    { id: 1, title: "Registration Open", message: "Spring Annual Tech Fest 2026 seats are opening.", isRead: false, createdAt: new Date().toISOString() },
+    { id: 2, title: "Volunteer Badge Issued", message: "Your volunteer certificate is ready.", isRead: false, createdAt: new Date().toISOString() }
+  ]);
+  const [unreadCount, setUnreadCount] = useState(2);
+
+  // Fetch notifications
+  const loadNotifications = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch("/api/notifications", {
+        headers: { "Authorization": `Bearer ${localStorage.getItem("eventhub_token") || ""}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLiveNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount ?? 0);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadNotifications();
+
+    if (socket) {
+      const handleNotif = (notif: any) => {
+        loadNotifications();
+        toast({
+          title: `🔔 ${notif.title}`,
+          description: notif.message,
+        });
+      };
+      socket.on("notification_created", handleNotif);
+      return () => {
+        socket.off("notification_created", handleNotif);
+      };
+    }
+  }, [user]);
 
   const toggleTheme = () => {
     const next = !isDark;
@@ -196,26 +240,48 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             {/* Notification Bell */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl relative text-foreground hover:bg-muted">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl relative text-foreground hover:bg-muted cursor-pointer">
                   <Bell className="w-4 h-4" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-ping" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
+                  {unreadCount > 0 && (
+                    <>
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-ping" />
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
+                    </>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80 p-3 rounded-2xl">
                 <div className="flex items-center justify-between border-b pb-2 mb-2">
                   <span className="font-bold text-xs">Campus Notifications</span>
-                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">2 New</span>
+                  {unreadCount > 0 ? (
+                    <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">{unreadCount} New</span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">All caught up</span>
+                  )}
                 </div>
-                <div className="space-y-2 text-xs">
-                  <div className="p-2 bg-muted/40 rounded-xl space-y-1">
-                    <p className="font-bold text-foreground">🎉 Registration Open</p>
-                    <p className="text-[11px] text-muted-foreground">Spring Annual Tech Fest 2026 seats are opening.</p>
-                  </div>
-                  <div className="p-2 bg-muted/40 rounded-xl space-y-1">
-                    <p className="font-bold text-foreground">🥇 Volunteer Badge Issued</p>
-                    <p className="text-[11px] text-muted-foreground">Your 28 volunteer hours certificate is ready.</p>
-                  </div>
+                <div className="space-y-2 text-xs max-h-72 overflow-y-auto">
+                  {liveNotifications.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground p-3 text-center">No new notifications</p>
+                  ) : (
+                    liveNotifications.map((notif) => (
+                      <Link
+                        key={notif.id}
+                        href={user?.role === "admin" ? "/dashboard/admin" : "/dashboard/organizer/events"}
+                        className="block"
+                      >
+                        <div className={`p-2.5 rounded-xl space-y-1 transition-colors hover:bg-muted cursor-pointer ${notif.isRead ? "bg-muted/30" : "bg-primary/5 border border-primary/20"}`}>
+                          <p className="font-bold text-foreground text-xs leading-tight flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                            {notif.title}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground line-clamp-2">{notif.message}</p>
+                          <span className="text-[9px] text-muted-foreground block pt-0.5 font-mono">
+                            {notif.createdAt ? format(new Date(notif.createdAt), "MMM d, h:mm a") : "Recent"}
+                          </span>
+                        </div>
+                      </Link>
+                    ))
+                  )}
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -245,6 +311,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/profile" className="w-full cursor-pointer text-xs font-bold flex items-center gap-2">
                       <User className="w-3.5 h-3.5" /> My Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/payments" className="w-full cursor-pointer text-xs font-bold flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                      <CreditCard className="w-3.5 h-3.5 text-emerald-600" /> Payments & Invoices
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthLogout } from "@workspace/api-client-react";
 import { 
   Calendar, LayoutDashboard, QrCode, ClipboardList, 
-  Users, Ticket, LogOut, Menu, X, ArrowLeft, ShieldCheck, MessageSquare, Star, Award, Trophy, Sparkles, User, Settings as SettingsIcon
+  Users, Ticket, LogOut, Menu, X, ArrowLeft, ShieldCheck, MessageSquare, Star, Award, Trophy, Sparkles, User, Settings as SettingsIcon, CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,6 +21,7 @@ const getNavItems = (role?: string): NavItem[] => {
     case "admin":
       return [
         { title: "My Profile", href: "/dashboard/profile", icon: User },
+        { title: "Payments & Invoices", href: "/dashboard/payments", icon: CreditCard },
         { title: "Admin Panel", href: "/dashboard/admin", icon: ShieldCheck },
         { title: "Organizer Overview", href: "/dashboard/organizer", icon: LayoutDashboard },
         { title: "Event Control", href: "/dashboard/organizer/events", icon: Calendar },
@@ -37,6 +38,7 @@ const getNavItems = (role?: string): NavItem[] => {
     case "organizer":
       return [
         { title: "My Profile", href: "/dashboard/profile", icon: User },
+        { title: "Payments & Invoices", href: "/dashboard/payments", icon: CreditCard },
         { title: "Overview", href: "/dashboard/organizer", icon: LayoutDashboard },
         { title: "Events", href: "/dashboard/organizer/events", icon: Calendar },
         { title: "Volunteers", href: "/dashboard/organizer/volunteers", icon: Users },
@@ -52,6 +54,7 @@ const getNavItems = (role?: string): NavItem[] => {
     case "volunteer":
       return [
         { title: "My Profile", href: "/dashboard/profile", icon: User },
+        { title: "Payments & Invoices", href: "/dashboard/payments", icon: CreditCard },
         { title: "My Shifts", href: "/dashboard/volunteer", icon: ClipboardList },
         { title: "Scan QR Code", href: "/dashboard/volunteer/scan", icon: QrCode },
         { title: "AI Intelligence Studio", href: "/dashboard/ai-studio", icon: Sparkles },
@@ -66,6 +69,7 @@ const getNavItems = (role?: string): NavItem[] => {
     case "attendee":
       return [
         { title: "My Profile", href: "/dashboard/profile", icon: User },
+        { title: "Payments & Invoices", href: "/dashboard/payments", icon: CreditCard },
         { title: "My Registrations", href: "/dashboard/attendee", icon: Ticket },
         { title: "AI Intelligence Studio", href: "/dashboard/ai-studio", icon: Sparkles },
         { title: "Gamification & Rewards", href: "/dashboard/gamification", icon: Sparkles },

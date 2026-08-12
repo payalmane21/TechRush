@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/components/auth-provider";
 import { DashboardLayout } from "@/components/dashboard-layout";
@@ -39,8 +39,16 @@ import {
   X,
   ExternalLink,
   Download,
-  Share2
+  Share2,
+  CreditCard,
+  Receipt,
+  FileSpreadsheet,
+  Printer,
+  Check,
+  Lock,
+  DollarSign
 } from "lucide-react";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
 export default function UserProfilePage() {
@@ -49,20 +57,20 @@ export default function UserProfilePage() {
 
   // Profile State
   const [profile, setProfile] = useState({
-    name: user?.name || "Priya Patel",
-    email: user?.email || "priya@university.edu",
+    name: user?.name || "Student Member",
+    email: user?.email || "student@university.edu",
     department: "Computer Science & Engineering",
-    role: user?.role || "volunteer",
-    bio: "Senior CS undergrad passionate about student event management, hackathons, and volunteer leadership. Lead QR ticket scanner for campus tech events.",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250",
+    role: user?.role || "attendee",
+    bio: "Passionate campus member exploring hackathons, career symposiums, and volunteer leadership. Active attendee with verified digital passes.",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
     volunteerHours: 38,
     maxHoursGoal: 50,
     skills: ["Event Management", "QR Ticket Scanning", "Audio/Video Booth", "Public Speaking", "Cybersecurity", "UI Design"],
     social: {
-      linkedin: "https://linkedin.com/in/priya-patel",
-      github: "https://github.com/priyapatel",
-      twitter: "https://twitter.com/priya_tech",
-      website: "https://priyapatel.dev",
+      linkedin: "https://linkedin.com",
+      github: "https://github.com",
+      twitter: "https://twitter.com",
+      website: "https://university.edu",
     },
   });
 
@@ -71,28 +79,55 @@ export default function UserProfilePage() {
   const [editForm, setEditForm] = useState({ ...profile });
   const [newSkill, setNewSkill] = useState("");
 
+  // Payments State
+  const [payments, setPayments] = useState<any[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+
+  useEffect(() => {
+    async function loadPayments() {
+      try {
+        setPaymentsLoading(true);
+        const res = await fetch("/api/payments/my", {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("eventhub_token") || ""}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPayments(data);
+        }
+      } catch (err) {
+        console.error("Failed to load payments", err);
+      } finally {
+        setPaymentsLoading(false);
+      }
+    }
+    loadPayments();
+  }, []);
+
   // Verified Certificates List
   const userCertificates = [
     {
       id: "CERT-2026-HACK-9842",
       eventTitle: "Spring Annual Hackathon 2026",
-      role: "First Place Winner",
+      role: "Participant Pass & Innovator",
       issueDate: "April 15, 2026",
     },
     {
       id: "CERT-2026-CULT-4410",
       eventTitle: "Grand Cultural Fest 2026",
-      role: "Lead Event Usher & Volunteer",
+      role: "VIP Pass Holder",
       issueDate: "April 18, 2026",
     },
   ];
 
   // Achievements Badges List
   const userBadges = [
-    { id: 1, title: "🥇 Gold Volunteer", description: "Completed 35+ verified service hours", icon: "🥇" },
-    { id: 2, title: "⚡ Speed Scanner", description: "Scanned 50+ QR tickets in under 10 mins", icon: "⚡" },
-    { id: 3, title: "⭐ 50+ Hours Shield", description: "50+ hours of verified volunteer service", icon: "⭐" },
-    { id: 4, title: "🚀 Early Bird", description: "Checked in early for 5 consecutive events", icon: "🚀" },
+    { id: 1, title: "🥇 Verified Member", description: "Cryptographically verified university account", icon: "🥇" },
+    { id: 2, title: "⚡ Instant Pass", description: "Generated instant digital QR ticket pass", icon: "⚡" },
+    { id: 3, title: "💳 Secure Pay", description: "Verified payments processed via Razorpay 256-bit SSL", icon: "💳" },
+    { id: 4, title: "🚀 Early Bird", description: "Checked in early for campus events", icon: "🚀" },
   ];
 
   // Handle Save Profile
@@ -100,28 +135,17 @@ export default function UserProfilePage() {
     e.preventDefault();
     setProfile({ ...editForm });
     setEditModalOpen(false);
-
     toast({
-      title: "✅ Profile Updated!",
-      description: "Your public profile changes have been saved.",
+      title: "Profile Updated",
+      description: "Your campus member profile has been saved.",
     });
   };
 
-  // Handle Avatar Upload Simulation
-  const handleAvatarUpload = () => {
-    const avatars = [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=250",
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250",
-    ];
-    const newAv = avatars[Math.floor(Math.random() * avatars.length)];
-    setEditForm({ ...editForm, avatar: newAv });
-    toast({ title: "📸 Avatar Updated", description: "Selected new profile photo." });
-  };
-
   // Add Skill Tag
-  const handleAddSkill = () => {
-    if (!newSkill.trim() || editForm.skills.includes(newSkill.trim())) return;
+  const handleAddSkill = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSkill.trim()) return;
+    if (editForm.skills.includes(newSkill.trim())) return;
     setEditForm({
       ...editForm,
       skills: [...editForm.skills, newSkill.trim()],
@@ -138,6 +162,7 @@ export default function UserProfilePage() {
   };
 
   const hoursProgress = Math.round((profile.volunteerHours / profile.maxHoursGoal) * 100);
+  const totalSpent = payments.reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
   return (
     <DashboardLayout>
@@ -167,17 +192,17 @@ export default function UserProfilePage() {
             <div className="space-y-3 text-center md:text-left flex-1">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
                 <h1 className="text-3xl sm:text-4xl font-serif font-bold text-white">{profile.name}</h1>
-                <Badge className="bg-amber-500 text-white font-bold text-xs px-3 py-1 shadow-md">
-                  {profile.role.toUpperCase()}
+                <Badge className="bg-amber-500 text-white font-bold text-xs px-3 py-1 shadow-md uppercase">
+                  {user?.role || profile.role}
                 </Badge>
                 <Badge variant="outline" className="text-white border-white/30 text-xs">
-                  Verified Student
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-400" /> Verified Student
                 </Badge>
               </div>
 
               <p className="text-xs sm:text-sm text-primary-foreground/80 flex items-center justify-center md:justify-start gap-2">
                 <Building2 className="w-4 h-4 text-accent shrink-0" />
-                {profile.department} • <Mail className="w-4 h-4 text-accent shrink-0 inline ml-1" /> {profile.email}
+                {profile.department} • <Mail className="w-4 h-4 text-accent shrink-0 inline ml-1" /> {user?.email || profile.email}
               </p>
 
               <p className="text-xs sm:text-sm text-white/90 max-w-2xl leading-relaxed italic bg-white/10 p-4 rounded-2xl border border-white/20">
@@ -219,61 +244,120 @@ export default function UserProfilePage() {
           </div>
         </Card>
 
-        {/* 2. STATS & VOLUNTEER HOURS SUMMARY */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* 2. STATS SUMMARY */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           
-          {/* Volunteer Hours Counter */}
-          <Card className="md:col-span-6 border-border/60 shadow-xs p-6 space-y-4 rounded-3xl">
-            <CardHeader className="p-0">
-              <CardTitle className="font-serif font-bold text-xl flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-primary" /> Certified Volunteer Service Hours
-                </span>
-                <span className="text-2xl font-bold text-primary">{profile.volunteerHours} / {profile.maxHoursGoal} hrs</span>
-              </CardTitle>
-              <CardDescription className="text-xs">University certified volunteer service progress</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 pt-2 space-y-2">
-              <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${hoursProgress}%` }} />
-              </div>
-              <span className="text-xs text-muted-foreground font-semibold block text-right">{hoursProgress}% of annual goal completed</span>
-            </CardContent>
+          <Card className="border-border/60 shadow-xs p-6 space-y-2 rounded-3xl">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-emerald-600" /> Total Verified Purchases
+            </span>
+            <div className="text-3xl font-serif font-bold text-emerald-600">₹{totalSpent}</div>
+            <span className="text-xs text-muted-foreground">{payments.length} Verified Transactions</span>
           </Card>
 
-          {/* SKILLS BADGES MANAGER */}
-          <Card className="md:col-span-6 border-border/60 shadow-xs p-6 space-y-4 rounded-3xl">
-            <CardHeader className="p-0">
-              <CardTitle className="font-serif font-bold text-xl flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500" /> Event & Technical Skills
-              </CardTitle>
-              <CardDescription className="text-xs">Verified campus roles & competencies</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 pt-2">
-              <div className="flex flex-wrap gap-2">
-                {profile.skills.map((skill, idx) => (
-                  <Badge key={idx} variant="secondary" className="px-3.5 py-1.5 rounded-xl font-bold text-xs bg-muted/60 text-foreground border border-border">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
+          <Card className="border-border/60 shadow-xs p-6 space-y-2 rounded-3xl">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-primary" /> Certified Volunteer Hours
+            </span>
+            <div className="text-3xl font-serif font-bold text-foreground">{profile.volunteerHours} hrs</div>
+            <span className="text-xs text-muted-foreground">{hoursProgress}% of annual goal</span>
+          </Card>
+
+          <Card className="border-border/60 shadow-xs p-6 space-y-2 rounded-3xl">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-green-600" /> Gateway Status
+            </span>
+            <div className="text-3xl font-serif font-bold text-foreground">Razorpay</div>
+            <span className="text-xs text-green-600 font-semibold">256-Bit SSL Encrypted</span>
           </Card>
 
         </div>
 
-        {/* 3. ACHIEVEMENTS & CERTIFICATES TABS */}
-        <Tabs defaultValue="achievements" className="w-full space-y-6">
+        {/* 3. ACHIEVEMENTS, CERTIFICATES & PAYMENTS TABS */}
+        <Tabs defaultValue="payments" className="w-full space-y-6">
           <TabsList className="bg-card border border-border p-1.5 rounded-2xl w-full justify-start overflow-x-auto flex-nowrap">
+            <TabsTrigger value="payments" className="rounded-xl font-bold text-xs px-4 py-2">
+              <CreditCard className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Verified Payments & Invoices ({payments.length})
+            </TabsTrigger>
             <TabsTrigger value="achievements" className="rounded-xl font-bold text-xs px-4 py-2">
-              <Trophy className="w-3.5 h-3.5 mr-2 text-amber-500" /> Earned Badges & Achievements ({userBadges.length})
+              <Trophy className="w-3.5 h-3.5 mr-2 text-amber-500" /> Earned Badges ({userBadges.length})
             </TabsTrigger>
             <TabsTrigger value="certificates" className="rounded-xl font-bold text-xs px-4 py-2">
-              <Award className="w-3.5 h-3.5 mr-2 text-primary" /> Verified Certificates ({userCertificates.length})
+              <Award className="w-3.5 h-3.5 mr-2 text-primary" /> Certificates ({userCertificates.length})
             </TabsTrigger>
           </TabsList>
 
-          {/* TAB 1: ACHIEVEMENTS BADGES */}
+          {/* TAB 1: PAYMENTS & INVOICES */}
+          <TabsContent value="payments" className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <h3 className="font-serif font-bold text-2xl text-foreground flex items-center gap-2">
+                  <ShieldCheck className="w-6 h-6 text-emerald-600" /> Verified Payment Receipts
+                </h3>
+                <p className="text-xs text-muted-foreground">All event pass payments verified via Razorpay HMAC-SHA256.</p>
+              </div>
+
+              <Link href="/dashboard/payments">
+                <Button variant="outline" size="sm" className="font-bold text-xs">
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> Full Payment Dashboard →
+                </Button>
+              </Link>
+            </div>
+
+            {paymentsLoading ? (
+              <div className="space-y-3 animate-pulse">
+                {[1, 2].map(i => <div key={i} className="h-24 bg-muted rounded-2xl" />)}
+              </div>
+            ) : payments.length === 0 ? (
+              <Card className="p-8 text-center space-y-2 border-border/60">
+                <CreditCard className="w-10 h-10 text-muted-foreground mx-auto" />
+                <h4 className="font-bold text-base">No Payments Yet</h4>
+                <p className="text-xs text-muted-foreground">When you register for paid campus events, your receipts will appear here.</p>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {payments.map((pmt) => (
+                  <Card key={pmt.id} className="p-5 border-border/60 hover:border-emerald-500/40 transition-all shadow-2xs">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-primary/10 text-primary border-0 font-medium text-[10px]">
+                            {pmt.eventCategory || "Campus Event"}
+                          </Badge>
+                          <Badge className="bg-emerald-600 text-white font-bold text-[10px]">
+                            <Check className="w-3 h-3 mr-0.5 inline" /> VERIFIED (HMAC-SHA256)
+                          </Badge>
+                          <span className="font-mono text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                            {pmt.receiptNumber || `RCP-${pmt.id}`}
+                          </span>
+                        </div>
+                        <h4 className="font-serif font-bold text-lg text-foreground">{pmt.eventTitle}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Order: <strong className="font-mono text-foreground">{pmt.orderId}</strong> • Payment: <strong className="font-mono text-foreground">{pmt.paymentId}</strong>
+                        </p>
+                      </div>
+
+                      <div className="flex sm:flex-col items-end justify-between w-full sm:w-auto gap-2">
+                        <div className="text-right">
+                          <span className="text-2xl font-serif font-bold text-emerald-600">₹{pmt.amount}</span>
+                          <span className="text-[10px] text-muted-foreground block">Via Razorpay</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => setSelectedReceipt(pmt)}
+                          className="font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          <Receipt className="w-3.5 h-3.5 mr-1" /> View Receipt
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* TAB 2: ACHIEVEMENTS BADGES */}
           <TabsContent value="achievements" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {userBadges.map((b) => (
@@ -291,7 +375,7 @@ export default function UserProfilePage() {
             </div>
           </TabsContent>
 
-          {/* TAB 2: CERTIFICATES GRID */}
+          {/* TAB 3: CERTIFICATES GRID */}
           <TabsContent value="certificates" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {userCertificates.map((cert) => (
@@ -319,90 +403,119 @@ export default function UserProfilePage() {
           </TabsContent>
 
         </Tabs>
-
       </div>
 
       {/* EDIT PROFILE MODAL */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="sm:max-w-xl rounded-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-xl rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="font-serif font-bold text-xl flex items-center gap-2">
-              <Edit className="w-5 h-5 text-primary" /> Edit User Profile & Skills
-            </DialogTitle>
-            <DialogDescription className="text-xs">Update your public student profile, bio, department, and social links.</DialogDescription>
+            <DialogTitle className="font-serif font-bold text-xl">Edit Campus Profile</DialogTitle>
+            <DialogDescription className="text-xs">Update your student information.</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSaveProfile} className="space-y-4 py-2">
-            
-            {/* Avatar Upload Button */}
-            <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-2xl border border-border/50">
-              <img src={editForm.avatar} alt="Avatar Preview" className="w-16 h-16 rounded-2xl object-cover border-2 border-primary" />
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-foreground">Profile Picture Photo</Label>
-                <p className="text-[10px] text-muted-foreground">Upload or choose a new avatar preview.</p>
-                <Button type="button" size="sm" variant="outline" onClick={handleAvatarUpload} className="font-bold text-xs h-8">
-                  <Camera className="w-3.5 h-3.5 mr-1" /> Change Photo
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Full Name</Label>
-                <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="h-10 text-xs font-semibold" />
+                <Label className="text-xs font-semibold">Full Name</Label>
+                <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="h-10 text-xs" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Department / Major</Label>
-                <Input value={editForm.department} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} className="h-10 text-xs font-semibold" />
+                <Label className="text-xs font-semibold">Department</Label>
+                <Input value={editForm.department} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} className="h-10 text-xs" />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground">Bio / About Me</Label>
+              <Label className="text-xs font-semibold">Bio</Label>
               <Textarea value={editForm.bio} onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })} className="h-20 text-xs" />
             </div>
 
-            {/* Skills Tag Editor */}
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold text-muted-foreground">Skills & Competencies</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add skill (e.g. Graphic Design)..."
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSkill(); } }}
-                  className="h-10 text-xs"
-                />
-                <Button type="button" onClick={handleAddSkill} className="font-bold text-xs h-10 px-4">
-                  <Plus className="w-4 h-4 mr-1" /> Add
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {editForm.skills.map((skill, idx) => (
-                  <Badge key={idx} variant="secondary" className="px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-                    {skill}
-                    <X className="w-3 h-3 cursor-pointer hover:text-destructive" onClick={() => handleRemoveSkill(skill)} />
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            {/* Social Links */}
-            <div className="space-y-3 pt-2">
-              <Label className="text-xs font-bold text-foreground uppercase tracking-wider">Social Profile Links</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input placeholder="LinkedIn URL" value={editForm.social.linkedin} onChange={(e) => setEditForm({ ...editForm, social: { ...editForm.social, linkedin: e.target.value } })} className="h-9 text-xs" />
-                <Input placeholder="GitHub URL" value={editForm.social.github} onChange={(e) => setEditForm({ ...editForm, social: { ...editForm.social, github: e.target.value } })} className="h-9 text-xs" />
-                <Input placeholder="Twitter URL" value={editForm.social.twitter} onChange={(e) => setEditForm({ ...editForm, social: { ...editForm.social, twitter: e.target.value } })} className="h-9 text-xs" />
-                <Input placeholder="Website URL" value={editForm.social.website} onChange={(e) => setEditForm({ ...editForm, social: { ...editForm.social, website: e.target.value } })} className="h-9 text-xs" />
-              </div>
-            </div>
-
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)}>Cancel</Button>
               <Button type="submit" className="font-bold text-xs bg-primary text-primary-foreground">Save Changes</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* OFFICIAL RECEIPT MODAL */}
+      <Dialog open={!!selectedReceipt} onOpenChange={() => setSelectedReceipt(null)}>
+        <DialogContent className="sm:max-w-lg rounded-3xl p-6 sm:p-8">
+          {selectedReceipt && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-start border-b pb-4">
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 mb-1">
+                    <ShieldCheck className="w-4 h-4" /> Official Tax Invoice & Payment Receipt
+                  </div>
+                  <h3 className="font-serif font-bold text-2xl text-foreground">EventHub Campus</h3>
+                  <span className="text-xs text-muted-foreground">University Event Registration Desk</span>
+                </div>
+                <div className="text-right">
+                  <Badge className="bg-emerald-600 text-white font-bold text-xs">PAID & VERIFIED ✓</Badge>
+                  <span className="font-mono text-xs font-bold text-foreground block mt-1">
+                    {selectedReceipt.receiptNumber || `RCP-${selectedReceipt.id}`}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <span className="font-bold text-muted-foreground uppercase tracking-wider block text-[10px]">Billed To:</span>
+                  <span className="font-bold text-foreground block text-sm mt-0.5">{user?.name || profile.name}</span>
+                  <span className="text-muted-foreground">{user?.email || profile.email}</span>
+                </div>
+
+                <div className="text-right space-y-1">
+                  <span className="font-bold text-muted-foreground uppercase tracking-wider block text-[10px]">Payment Details:</span>
+                  <p><span className="text-muted-foreground">Order ID:</span> <strong className="font-mono">{selectedReceipt.orderId}</strong></p>
+                  <p><span className="text-muted-foreground">Payment ID:</span> <strong className="font-mono">{selectedReceipt.paymentId}</strong></p>
+                  <p><span className="text-muted-foreground">Date:</span> {selectedReceipt.createdAt ? format(new Date(selectedReceipt.createdAt), "MMM d, yyyy") : "Today"}</p>
+                </div>
+              </div>
+
+              <div className="border rounded-2xl overflow-hidden text-xs">
+                <div className="bg-muted/60 p-3 font-bold text-muted-foreground flex justify-between">
+                  <span>Item / Description</span>
+                  <span>Amount</span>
+                </div>
+                <div className="p-3.5 space-y-2 divide-y divide-border/50">
+                  <div className="flex justify-between pt-1">
+                    <div>
+                      <strong className="text-foreground block">{selectedReceipt.eventTitle}</strong>
+                      <span className="text-muted-foreground text-[11px]">Category: {selectedReceipt.eventCategory || "Technical"}</span>
+                    </div>
+                    <span className="font-bold text-foreground">₹{selectedReceipt.amount}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 text-muted-foreground">
+                    <span>Convenience Fee</span>
+                    <span className="text-green-600 font-semibold">₹0 (Waived)</span>
+                  </div>
+                  <div className="flex justify-between pt-2 font-bold text-sm text-foreground">
+                    <span>Total Amount Paid</span>
+                    <span className="text-emerald-600 text-base">₹{selectedReceipt.amount}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Razorpay HMAC-SHA256 Verified</span>
+                </div>
+                <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px]">
+                  Valid Signature
+                </Badge>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="outline" onClick={() => setSelectedReceipt(null)}>Close</Button>
+                <Button onClick={() => window.print()} className="font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Printer className="w-4 h-4 mr-2" /> Print Receipt
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

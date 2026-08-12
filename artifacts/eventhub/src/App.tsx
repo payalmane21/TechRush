@@ -37,6 +37,7 @@ import LeaderboardPage from '@/pages/dashboard/leaderboard';
 import GamificationHub from '@/pages/dashboard/gamification';
 import AiStudioPage from '@/pages/dashboard/ai-studio';
 import UserProfilePage from '@/pages/dashboard/profile';
+import PaymentsDashboardPage from '@/pages/dashboard/payments';
 import SettingsPage from '@/pages/dashboard/settings';
 
 import BrowseEvents from '@/pages/browse-events';
@@ -220,6 +221,13 @@ function Router() {
         {() => (
           <ProtectedRoute allowedRoles={['attendee', 'volunteer', 'organizer', 'admin']}>
             <UserProfilePage />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/dashboard/payments">
+        {() => (
+          <ProtectedRoute allowedRoles={['attendee', 'volunteer', 'organizer', 'admin']}>
+            <PaymentsDashboardPage />
           </ProtectedRoute>
         )}
       </Route>
