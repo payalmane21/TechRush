@@ -2,15 +2,15 @@ import rateLimit from "express-rate-limit";
 import type { Request, Response } from "express";
 
 /**
- * Rate Limiter for Login Endpoint (Max 5 attempts per 15 minutes)
+ * Rate Limiter for Login Endpoint (Max 50 attempts per 15 minutes - supports team presentations on same IP)
  */
 export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: "Too many login attempts from this IP. Please wait 15 minutes before trying again to prevent brute-force attacks.",
+    error: "Too many login attempts from this IP. Please wait a few minutes before trying again.",
   },
 });
 

@@ -51,6 +51,44 @@ const verifiedEmails = new Set<string>();
 const registeredUsersMap = new Map<string, any>();
 const userByIdMap = new Map<number, any>();
 
+// Permanent Demo Accounts Pre-Initialization
+const initPermanentDemoAccounts = async () => {
+  const hash123456 = await hashPassword("123456");
+  
+  const permanentList = [
+    { id: 999, name: "Tanishka Ghewari", email: "tanishkaghewari@gmail.com", role: "admin", phone: "+91 98765 00001", collegeId: "ADM-TG01" },
+    { id: 2, name: "Payal Mane", email: "payalmane@gmail.com", role: "organizer", phone: "+91 98765 00002", collegeId: "ORG-PM02" },
+    { id: 3, name: "Mahi Kasliwal", email: "mahik@gmail.com", role: "attendee", phone: "+91 98765 00003", collegeId: "ATT-MK03" },
+    { id: 4, name: "Nehal Ahuja", email: "nehalahuja@gmail.com", role: "volunteer", phone: "+91 98765 00004", collegeId: "VOL-NA04" },
+    // Aliases
+    { id: 998, name: "Tanishka Ghewari (Admin)", email: "admin.demo@eventhub.com", role: "admin", phone: "+91 98765 00011", collegeId: "ADM-DEMO" },
+    { id: 102, name: "Payal Mane (Organizer)", email: "organizer.demo@eventhub.com", role: "organizer", phone: "+91 98765 00012", collegeId: "ORG-DEMO" },
+    { id: 103, name: "Mahi Kasliwal (Attendee)", email: "attendee.demo@eventhub.com", role: "attendee", phone: "+91 98765 00013", collegeId: "ATT-DEMO" },
+    { id: 104, name: "Nehal Ahuja (Volunteer)", email: "volunteer.demo@eventhub.com", role: "volunteer", phone: "+91 98765 00014", collegeId: "VOL-DEMO" },
+    // Legacy demo accounts
+    { id: 101, name: "Dr. Sarah Jenkins", email: "admin@eventhub.demo", role: "admin", phone: "+1 555-0100", collegeId: "ADM-001" },
+    { id: 1, name: "Alex Chen", email: "organizer@eventhub.demo", role: "organizer", phone: "+1 555-0101", collegeId: "ORG-001" },
+    { id: 5, name: "Sam Rivera", email: "attendee@eventhub.demo", role: "attendee", phone: "+1 555-0103", collegeId: "ATT-001" },
+    { id: 6, name: "Jordan Lee", email: "volunteer@eventhub.demo", role: "volunteer", phone: "+1 555-0102", collegeId: "VOL-001" },
+  ];
+
+  for (const acc of permanentList) {
+    const norm = acc.email.toLowerCase().trim();
+    verifiedEmails.add(norm);
+    const obj = {
+      ...acc,
+      email: norm,
+      passwordHash: hash123456,
+      isEmailVerified: true,
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+    };
+    registeredUsersMap.set(norm, obj);
+    userByIdMap.set(acc.id, obj);
+  }
+};
+
+initPermanentDemoAccounts().catch(console.error);
+
 // Helper email format validation regex
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -432,10 +470,10 @@ router.post("/auth/demo-login", async (req, res): Promise<void> => {
   try {
     const { role = "attendee" } = req.body;
     const demoConfigs: Record<string, any> = {
-      admin: { name: "Dr. Sarah Jenkins", email: "admin@eventhub.demo", role: "admin", collegeId: "ADM-001" },
-      organizer: { name: "Alex Chen", email: "organizer@eventhub.demo", role: "organizer", collegeId: "ORG-001" },
-      volunteer: { name: "Jordan Lee", email: "volunteer@eventhub.demo", role: "volunteer", collegeId: "VOL-001" },
-      attendee: { name: "Sam Rivera", email: "attendee@eventhub.demo", role: "attendee", collegeId: "ATT-001" },
+      admin: { name: "Tanishka Ghewari", email: "tanishkaghewari@gmail.com", role: "admin", collegeId: "ADM-TG01" },
+      organizer: { name: "Payal Mane", email: "payalmane@gmail.com", role: "organizer", collegeId: "ORG-PM02" },
+      volunteer: { name: "Nehal Ahuja", email: "nehalahuja@gmail.com", role: "volunteer", collegeId: "VOL-NA04" },
+      attendee: { name: "Mahi Kasliwal", email: "mahik@gmail.com", role: "attendee", collegeId: "ATT-MK03" },
     };
 
     const target = demoConfigs[role] || demoConfigs.attendee;
@@ -447,22 +485,26 @@ router.post("/auth/demo-login", async (req, res): Promise<void> => {
     } catch {}
 
     if (!user) {
+      user = registeredUsersMap.get(target.email);
+    }
+
+    if (!user) {
       try {
-        const passwordHash = await hashPassword("demo1234");
+        const passwordHash = await hashPassword("123456");
         const [inserted] = await db.insert(usersTable).values({
           name: target.name,
           email: target.email,
           passwordHash,
           role: target.role as any,
           collegeId: target.collegeId,
-          phone: "+1 555-0100",
+          phone: "+91 98765 00000",
         }).returning();
         user = inserted;
       } catch {
         user = {
           id: Math.floor(Math.random() * 900) + 100,
           ...target,
-          phone: "+1 555-0100",
+          phone: "+91 98765 00000",
           createdAt: new Date(),
         };
       }
