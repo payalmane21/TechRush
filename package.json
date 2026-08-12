@@ -2,8 +2,9 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
+  "type": "module",
   "scripts": {
-    "build": "pnpm --filter @workspace/eventhub run build && node scripts/copy-dist.js",
+    "build": "pnpm --filter @workspace/eventhub run build && node scripts/copy-dist.mjs",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
