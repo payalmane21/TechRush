@@ -1,505 +1,607 @@
 # EventHub
 
-> **Centralized Campus Event & Volunteer Management Portal**  
-> *Real-Time QR Check-in, Live Attendance Analytics, Role-Based Access Control, and Transactional Email Verification.*
+> **Centralized Event, Attendee, Organizer, Admin and Volunteer Management Platform.**  
+> *A unified collegiate platform delivering complete event lifecycles, administrative governance, cryptographic QR ticketing, Razorpay payment verification, AI-powered volunteer matching, attendee concierge chatbot with event mascots, and multi-device real-time collaboration.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-v22.23-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-v20%2B-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-v18.3.1-blue.svg)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-v5.9-blue.svg)](https://www.typescriptlang.org/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-38bdf8.svg)](https://tailwindcss.com/)
-[![Express](https://img.shields.io/badge/Express-v5.2-000000.svg)](https://expressjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-v5.7-blue.svg)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-v7.3-646CFF.svg)](https://vitejs.dev/)
+[![Express](https://img.shields.io/badge/Express-v5.0-000000.svg)](https://expressjs.com/)
 [![Drizzle ORM](https://img.shields.io/badge/Drizzle--ORM-v0.40-c5f74f.svg)](https://orm.drizzle.team/)
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-v4.8-010101.svg)](https://socket.io/)
-[![Resend](https://img.shields.io/badge/Resend-v4.1-black.svg)](https://resend.com/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-38bdf8.svg)](https://tailwindcss.com/)
 
 ---
 
-## 📋 Problem Statement
+## 1. Project Overview
 
-Campus event management in educational institutions is severely fragmented. Organizers traditionally rely on disconnected tools:
-* **WhatsApp Groups & Spreadsheets**: Registrations are tracked manually in spreadsheets, leading to data corruption, lost entries, and zero seat capacity enforcement.
-* **Manual Paper Check-Ins**: Long queues form at venue entrances during major cultural fests, hackathons, and symposiums due to paper check-in sheets.
-* **Lack of Real-Time Visibility**: Department heads and organizers cannot view live attendance rates or track capacity bottlenecks while events are underway.
-* **Unstructured Volunteer Operations**: Volunteers receive verbal or informal chat instructions without clear task assignments, shift tracking, or digital activity logging.
-* **Unverified Registrations**: Fraudulent signups occur when verification is not enforced, wasting reserved seat passes.
+**EventHub** is a centralized, end-to-end event management platform engineered to connect **Administrators**, **Organizers**, **Attendees**, and **Volunteers** within a single, secure environment. 
 
-**EventHub** eliminates these inefficiencies by delivering a single, unified enterprise portal that automates event creation, ticketing, camera-based QR check-ins, volunteer task boards, and live attendance analytics.
+The platform oversees the complete event lifecycle: from event proposal, drafting, and administrative governance to ticket registration, secure payment processing, camera-based QR attendance tracking, AI-assisted volunteer recruitment, thematic AI concierge assistance, and multi-device real-time team coordination.
 
 ---
 
-## 💡 Solution
+## 2. Problem Statement
 
-**EventHub** connects Students, Organizers, Volunteers, and Administrators on a unified, high-performance platform:
+Collegiate and institutional event operations are traditionally fragmented across disconnected spreadsheets, paper lists, and unstructured messaging groups:
 
-1. **Self-Service Event Operations**: Organizers publish events, configure seat limits, and set up custom schedules with a single click.
-2. **Automated QR Pass Issuance**: Upon registering, attendees receive a cryptographically unique digital ticket containing an embedded QR code PNG data URL.
-3. **Camera-Based QR Scanner**: Volunteers use any smartphone or tablet camera to scan attendee passes at check-in desks, processing check-ins/outs in under 200 milliseconds.
-4. **Live Socket.IO Stream**: Organizers monitor live attendance counts and entrance feeds updating in real time without refreshing the browser.
-5. **Volunteer Task Board**: Organizers assign shift duties, while volunteers track task completion status (`pending` → `in_progress` → `completed`).
-6. **Transactional Email Engine**: Real OTP verification codes and password reset links are dispatched via **Resend API** or **Nodemailer Gmail SMTP**, featuring a dedicated **Hackathon Demo Mode** for live judging.
+* **Fragmented Event Management**: Organizers, campus clubs, and administrators use disparate tools without a single source of truth.
+* **Manual Registration & Capacity Overruns**: Registrations tracked on external forms lead to lost entries, unverified claims, and accidental overbooking.
+* **Difficult Attendance Tracking & Long Gate Queues**: Paper sign-in sheets cause delays and make duplicate check-in prevention impossible.
+* **Lack of Centralized Volunteer Management**: Volunteers are recruited through informal chats without skill alignment, duty tracking, or shift verification.
+* **Delayed Event Approval & Governance Gaps**: Event proposals lack formal administrative review, audit trails, and status visibility.
+* **Poor Visibility of Registrations & Revenue**: Department heads cannot track live ticket registrations, fee collections, or gate check-in velocity.
+* **Lack of Intelligent Volunteer Allocation**: Organizers struggle to match volunteer applications to technical and operational requirements.
+* **Limited Attendee Assistance**: Students lack real-time answers regarding venue locations, schedules, entry fees, and digital passes.
+* **Lack of Real-Time Coordination**: Multi-member event teams cannot coordinate live on event day without manual dashboard refreshing.
 
----
-
-## ✨ Key Features
-
-### 🔐 Authentication & Security
-- [x] **Salted Bcrypt Password Hashing** (Cost Factor 12)
-- [x] **Dual Token JWT Architecture** (15-min Access Tokens + 7-day Refresh Tokens in `httpOnly` cookies)
-- [x] **Transactional Email Verification** (Resend API SDK & Nodemailer Gmail SMTP)
-- [x] **Hackathon Demo Mode** (`EMAIL_DEMO_MODE=true` with configurable verified inbox redirection)
-- [x] **Secure Password Reset Flow** (256-bit cryptographic reset tokens with 15-min expiry)
-- [x] **Brute-Force Account Lockout Shield** (15-min lock after 5 consecutive failed attempts)
-- [x] **Multi-Level Rate Limiting** (`express-rate-limit` on signup, login, OTP, and reset endpoints)
-- [x] **XSS Input Sanitization** (HTML escaping & strict schema validation via Zod)
-
-### 🎫 Event & Attendee Management
-- [x] **Event Publishing Workflow** (Draft, Published, Completed, Canceled states)
-- [x] **Category & Search Filtering** (Filter by Technical, Cultural, Sports, Workshop, Symposium)
-- [x] **Capacity Tracking & Seat Reservation** (Prevents overbooking automatically)
-- [x] **QR Code Pass Generation** (High-contrast PNG Data URL generated per registration)
-- [x] **Digital Ticket Management** (Download PDF ticket passes, view check-in status)
-
-### 📱 Volunteer & Scanner Operations
-- [x] **HTML5 Camera QR Scanner** (Single-viewport smartphone & webcam scanning via `html5-qrcode`)
-- [x] **Manual Ticket Code & Email Check-In** (Fallback for non-camera stations)
-- [x] **Check-In & Check-Out Audit Logging** (Tracks station name, timestamp, and scanner user ID)
-- [x] **Volunteer Application Onboarding** (Students apply for volunteer drives; organizers approve/reject)
-- [x] **Volunteer Task Board** (Create tasks, assign volunteers, track shift status)
-
-### 📊 Dashboards & Analytics
-- [x] **Attendee Dashboard** (View tickets, registered events, upcoming schedules)
-- [x] **Organizer Dashboard** (Live event analytics, ticket sales, registration velocity)
-- [x] **Volunteer Dashboard** (Assigned tasks, active shift info, QR scanner access)
-- [x] **Admin Control Panel** (System-wide user role management, global event metrics)
-- [x] **Real-Time Attendance Monitor** (Socket.IO live feed of attendee arrivals)
-- [x] **Interactive Analytics Charts** (Recharts bar & pie charts for attendance & registration velocity)
+**EventHub solves these challenges** by unifying event governance, payments, attendance, intelligence, and communication in one real-time platform.
 
 ---
 
-## 🏗️ Architecture
+## 3. Key Features
 
-EventHub is structured as a modern multi-package workspace featuring an Express REST + WebSocket API server communicating with a React SPA frontend client.
+### 📅 Event Management
+* **Event Creation & Editing**: Organizers configure titles, descriptions, categories, venues, timestamps, capacities, pricing, rules, and banner visuals.
+* **Governance Submission**: One-click event submission for institutional administrative review.
+* **Admin Review & Approval/Rejection**: Administrators review event details and approve or reject with custom feedback.
+* **Event Publishing**: Organizers publish approved events live to the public catalog.
+* **Complete Lifecycle Tracking**: Full state machine management (`Draft` $\rightarrow$ `Pending Approval` $\rightarrow$ `Approved` $\rightarrow$ `Published` $\rightarrow$ `Closed` / `Rejected`).
 
-```mermaid
-flowchart TD
-    subgraph Client["Frontend Client (React + TypeScript)"]
-        SPA["Single Page Application (Wouter / React Query)"]
-        Scanner["Camera QR Scanner (html5-qrcode)"]
-        Charts["Analytics Engine (Recharts)"]
-    end
+### 🎟️ Attendee Management
+* **Event Discovery**: Search and filter upcoming events by category (*Technology, Cultural, Sports, Academic, Business, Social*).
+* **Comprehensive Registration**: Complete registration forms capturing student name, college, email, and phone number.
+* **Free & Paid Event Workflows**: Instant free student passes or secure checkout for paid masterclasses.
+* **Cryptographic QR Tickets**: Unique QR pass generation for every confirmed registration with fraud-proof verification tokens.
+* **Attendee Dashboard**: Dedicated portal to access confirmed passes, event schedules, and payment receipts.
 
-    subgraph API["Backend API Server (Node.js + Express v5)"]
-        AuthMiddleware["JWT & RBAC Middleware"]
-        AuthRoutes["Auth & Email Verification Routes"]
-        EventRoutes["Event & Registration Routes"]
-        CheckinRoutes["Check-in & QR Validation Routes"]
-        SocketServer["Socket.IO WebSocket Engine"]
-    end
+### 💳 Payments & Financial Tracking
+* **Razorpay Payment Gateway Integration**: Seamless checkout supporting UPI, Credit/Debit Cards, and NetBanking.
+* **Cryptographic Server-Side Verification**: Verification of payment IDs, order IDs, and HMAC-SHA256 signatures before confirming tickets.
+* **Instant Ticket Issuance**: Registrations are confirmed only after verified payment capture.
+* **Live Revenue Tracking**: Real-time revenue metrics on Organizer and Admin dashboards.
+* **University Payment Ledger**: Immutable ledger of confirmed transactions.
 
-    subgraph Transport["Email & Real-Time Engine"]
-        ResendSDK["Resend API SDK"]
-        GmailSMTP["Nodemailer Gmail SMTP"]
-        WebSockets["Socket.IO Broadcast Channel"]
-    end
+### 📷 QR Code & Attendance Tracking
+* **HTML5 Camera QR Scanner**: In-browser camera scanning on any smartphone or tablet for volunteers.
+* **Manual Code / Email Fallback**: Manual check-in options for non-camera stations.
+* **Duplicate Check-In Prevention**: Rejects already scanned tickets and provides visual warning badges.
+* **Check-In & Check-Out Auditing**: Timestamps and volunteer scanner IDs recorded for every gate action.
+* **Live Attendance Analytics**: Real-time progress bars showing current venue check-in percentages.
 
-    subgraph Database["Data Layer"]
-        ORM["Drizzle ORM"]
-        PostgresDB[(PostgreSQL Database)]
-        MemoryFallback[(In-Memory High-Availability Store)]
-    end
+### 🤖 AI Capabilities
+* **Attendee-Only AI Chatbot**: Interactive campus concierge answering questions about event schedules, fees, venues, and passes.
+* **Event-Grounded Intelligence**: AI retrieves authentic database information to answer event-specific questions accurately.
+* **AI Event Mascot Studio**: 1-click collegiate character synthesis generating SVG mascot visuals, personality bios, and generative prompts.
+* **Predefined Thematic Styling**: Automatic theme adaptation (*Tech, Sports, Cultural, Academic, Business, Entertainment, General*) matching the viewed event.
+* **AI-Powered Volunteer Matching**: Evaluates volunteer skills, experience, and uploaded resumes against event requirements to compute match scores and recommendations.
 
-    SPA -->|HTTP REST API| AuthMiddleware
-    Scanner -->|POST /api/checkin/scan| CheckinRoutes
-    SPA <-->|Bi-Directional WebSockets| SocketServer
+### 🤝 Volunteer Management
+* **Volunteer Applications**: Students apply for volunteer drives, submitting skills, experience, and resumes.
+* **Requirement Definitions**: Organizers define required skills, responsibilities, and required headcount.
+* **Ranked AI Recommendations**: Organizers review skill alignment scores before making final assignments.
+* **Assignment Notifications**: Instant notifications dispatched to volunteers upon selection.
+* **Volunteer Dashboard**: Dedicated interface with assigned duties, active shifts, and QR gate scanner access.
 
-    AuthMiddleware --> AuthRoutes
-    AuthMiddleware --> EventRoutes
-    AuthMiddleware --> CheckinRoutes
+### ⚡ Real-Time Collaboration
+* **Live WebSocket (Socket.IO) Synchronization**: Instant cross-device updates for approvals, registrations, payments, and gate arrivals.
+* **Cross-Tab BroadcastChannel Sync**: Instant client-side state hydration across browser tabs.
+* **Real-Time Group Chat**: Dedicated live team chatroom connecting Admin, Organizer, Attendee, and Volunteer accounts.
+* **Notification Stream**: Instant alerts for event approvals, volunteer assignments, and confirmed payments.
 
-    AuthRoutes --> ResendSDK
-    AuthRoutes --> GmailSMTP
-    CheckinRoutes -->|Broadcast Event| SocketServer
+### 📊 Role-Specific Dashboards
+* **Admin Dashboard**: System-wide event approvals, platform user metrics, gross revenue, and attendance audits.
+* **Organizer Dashboard**: Event drafting, mascot studio, volunteer matching, live check-in meters, and revenue stats.
+* **Attendee Dashboard**: Active ticket passes, full-screen QR pass viewer, and payment transaction history.
+* **Volunteer Dashboard**: Active volunteer assignments, duty instructions, and camera QR verification terminal.
 
-    AuthRoutes --> ORM
-    EventRoutes --> ORM
-    CheckinRoutes --> ORM
+---
 
-    ORM --> PostgresDB
-    ORM -.->|Failover Protection| MemoryFallback
+## 4. User Roles & Capabilities
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    EVENTHUB PLATFORM                                     │
+└──────────────┬───────────────────┬──────────────────────────┬────────────────────────────┘
+               │                   │                          │                            │
+               ▼                   ▼                          ▼                            ▼
+        ┌──────────────┐   ┌──────────────┐            ┌──────────────┐             ┌──────────────┐
+        │    ADMIN     │   │  ORGANIZER   │            │   ATTENDEE   │             │  VOLUNTEER   │
+        └──────┬───────┘   └──────┬───────┘            └──────┬───────┘             └──────┬───────┘
+               │                   │                          │                            │
+               ├─ Review Events    ├─ Create / Edit Events    ├─ Browse Events             ├─ Apply to Events
+               ├─ Approve / Reject ├─ Submit for Approval     ├─ Use AI Chatbot            ├─ Submit Skills/CV
+               ├─ Platform Stats   ├─ Publish Live Events     ├─ Register (Free/Paid)      ├─ View AI Assignment
+               ├─ Monitor Revenue  ├─ AI Mascot Studio        ├─ Access QR Pass            ├─ Scan Gate QR
+               └─ Audit Check-ins  ├─ AI Volunteer Matching   └─ View Tickets              └─ Log Check-ins
+                                   └─ Track Attendance
 ```
 
-### QR Check-In Sequence Diagram
+| Role | Primary Responsibilities | Key Dashboard Views |
+| :--- | :--- | :--- |
+| **ADMIN** | Reviews submitted events, enforces institutional guidelines, approves/rejects event proposals, monitors gross university revenue, and audits global attendance metrics. | `/dashboard/admin`, `/dashboard/admin/approvals`, `/dashboard/messages` |
+| **ORGANIZER** | Drafts events, generates AI mascots, submits events for review, publishes approved events, defines volunteer needs, uses AI matching, assigns volunteers, and monitors live check-ins. | `/dashboard/organizer`, `/dashboard/organizer/events/new`, `/dashboard/organizer/volunteers`, `/dashboard/messages` |
+| **ATTENDEE** | Discovers published events, consults the event-grounded AI chatbot, registers for free/paid passes, completes Razorpay checkout, and accesses digital QR tickets. | `/events`, `/events/:id`, `/dashboard/attendee`, `/dashboard/messages` |
+| **VOLUNTEER** | Applies for volunteer drives with skills/experience, reviews assigned duty roles, checks in attendees using camera QR scanner, and tracks shift credit hours. | `/dashboard/volunteer`, `/dashboard/volunteer/scanner`, `/dashboard/messages` |
+
+---
+
+## 5. Event Approval Workflow
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Attendee
-    actor Volunteer
-    participant ScannerUI as Volunteer Scanner UI
-    participant Backend as Express API Server
-    participant DB as PostgreSQL Database
-    participant Sockets as Socket.IO Engine
-    participant Dashboard as Organizer Dashboard
-
-    Attendee->>Volunteer: Presents Digital Pass (QR Code)
-    Volunteer->>ScannerUI: Scans QR Code via Smartphone Camera
-    ScannerUI->>Backend: POST /api/checkin/scan { qrToken, eventId, station }
-    Backend->>Backend: Verify JWT Auth & Volunteer Permission
-    Backend->>DB: Query Ticket Registration & Existing Scans
-    alt Invalid or Duplicate Ticket
-        Backend-->>ScannerUI: Return 400 Bad Request { error: "Already checked in" }
-    else Valid Ticket Pass
-        Backend->>DB: Insert into checkin_logs & Update Registration Status
-        Backend->>Sockets: Broadcast "checkin:recorded" { attendeeName, eventId, timestamp }
-        Sockets-->>Dashboard: Live Update Attendance Counter & Feed
-        Backend-->>ScannerUI: Return 200 OK { success: true, attendeeName, action: "check_in" }
+    actor Org as Organizer
+    actor Admin as Administrator
+    actor Att as Attendee
+    
+    Org->>Org: 1. Creates Event Draft (Title, Venue, Date, Capacity, Price, Mascot)
+    Org->>Admin: 2. Submits Event for Administrative Review
+    Note over Admin: Admin receives real-time notification
+    Admin->>Admin: 3. Reviews Event Details, Schedule & Safety Guidelines
+    alt Event Approved
+        Admin-->>Org: 4a. Event Approved (Status: approved)
+        Org->>Org: 5. Publishes Event Live
+        Note over Att: 6. Event appears in Public Catalog
+    else Event Rejected
+        Admin-->>Org: 4b. Event Rejected with Reason (Status: rejected)
+        Org->>Org: Edits & Re-submits Draft
     end
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 6. Registration & Payment Flow
+
+```mermaid
+flowchart TD
+    A[Attendee Selects Event] --> B[Clicks Register]
+    B --> C[Enters Student Information]
+    C --> D{Is Event Free or Paid?}
+    
+    D -->|Free Event ₹0| E[Instant Confirmation]
+    E --> F[Generate Signed QR Ticket]
+    
+    D -->|Paid Event > ₹0| G[Create Razorpay Order]
+    G --> H[Attendee Completes Razorpay Checkout]
+    H --> I[Backend Verifies HMAC-SHA256 Signature]
+    I --> J{Signature Valid?}
+    
+    J -->|Yes| K[Record Payment in Ledger]
+    K --> L[Confirm Registration]
+    L --> F
+    
+    J -->|No| M[Reject Transaction & Log Warning]
+```
+
+> [!IMPORTANT]
+> Paid event registrations are **confirmed strictly after server-side cryptographic signature verification** via `POST /api/payments/verify`. Unverified or forged client payloads are rejected.
+
+---
+
+## 7. Real-Time Architecture
+
+EventHub incorporates a real-time event pipeline powered by **Socket.IO** and **Browser BroadcastChannel** to synchronize state across connected devices without requiring page refreshes:
+
+```mermaid
+flowchart LR
+    subgraph Server["EventHub Backend API"]
+        SocketEngine["Socket.IO Server Engine"]
+    end
+
+    subgraph Clients["Connected Live Devices"]
+        AdminDevice["Device 1: Admin Dashboard"]
+        OrgDevice["Device 2: Organizer Dashboard"]
+        AttDevice["Device 3: Attendee Portal"]
+        VolDevice["Device 4: Volunteer Scanner"]
+    end
+
+    SocketEngine <-->|"event_approved"| OrgDevice
+    SocketEngine <-->|"registration_created"| OrgDevice
+    SocketEngine <-->|"payment_confirmed"| AdminDevice
+    SocketEngine <-->|"volunteer_assigned"| VolDevice
+    SocketEngine <-->|"attendance_updated"| OrgDevice
+    SocketEngine <-->|"new_chat_message"| AdminDevice & OrgDevice & AttDevice & VolDevice
+```
+
+* **Live Registration Feed**: Organizer and Admin dashboards update capacity meters as attendees register.
+* **Instant Revenue Sync**: Payment captures immediately update financial metrics on administrative screens.
+* **Approval Notifications**: Organizers receive instant alerts when admins approve proposals.
+* **Volunteer Assignment Alerts**: Volunteers receive instant push notices when selected for duty.
+* **Gate Attendance Stream**: Entrance check-ins update check-in counters in real time.
+* **Real-Time Group Chat**: All four authenticated accounts communicate with zero-latency delivery.
+
+---
+
+## 8. AI Volunteer Matching System
+
+```mermaid
+flowchart TD
+    subgraph Input["Application Data"]
+        V1["Volunteer Profile & Bio"]
+        V2["Technical / Operational Skills"]
+        V3["Past Experience & Hours"]
+        V4["Resume / CV Text"]
+    end
+
+    subgraph Requirements["Event Needs"]
+        R1["Organizer Skill Requirements"]
+        R2["Headcount & Shift Slots"]
+    end
+
+    Input & Requirements --> Engine["AI Contextual Match Engine"]
+    Engine --> Ranked["Ranked Recommendations with Match % & Skill Gap Analysis"]
+    Ranked --> Review["Organizer Reviews Recommendations"]
+    Review --> Decision["Organizer Makes Final Assignment Decision"]
+```
+
+> [!NOTE]
+> The AI matching engine **assists the Organizer** by calculating skill overlap, keyword alignment, and experience suitability. The **final assignment decision remains entirely in the hands of the Organizer**.
+
+---
+
+## 9. Attendee AI Concierge & Mascot Studio
+
+### Attendee-Only AI Assistant
+* Exclusively accessible to authenticated attendees (`role: "attendee"`).
+* Grounded in authentic database records to answer questions regarding:
+  * *"What is this event about?"* $\rightarrow$ Authentic title, description, and agenda.
+  * *"How much does it cost?"* $\rightarrow$ Accurate ticket pricing and payment options.
+  * *"Where is it located?"* $\rightarrow$ Exact campus venue and gate arrival guidance.
+  * *"When does it start?"* $\rightarrow$ Formatted dates and start/end schedules.
+  * *"How do I register?"* $\rightarrow$ Step-by-step guidance with direct registration actions.
+  * *"Is registration still open?"* $\rightarrow$ Live seat availability against venue capacity.
+
+### AI Event Mascot Studio
+* Organizers can generate a visual mascot tailored to event titles, categories, and keywords.
+* Mascots are stored as SVG asset references (`mascotUrl` and `mascotPrompt`) in the event record.
+* Generated mascots seamlessly appear on event detail pages and become the active persona of the AI chatbot.
+* **Non-Blocking Resilience**: Mascot generation is completely optional and does not impede standard event creation.
+
+### Predefined Thematic Systems
+Controlled, safe styling metadata mapped to event categories:
+
+| Theme | Mascot Character | Thematic Palette | Assistant Persona |
+| :--- | :--- | :--- | :--- |
+| **`TECH`** | 🦉 Byte the Cyber Owl | Neon Cyan & Indigo | AI & Hackathon Concierge |
+| **`CULTURAL`** | 🦊 Aria the Melody Fox | Rose, Pink & Fuchsia | Arts & Performance Concierge |
+| **`SPORTS`** | 🐆 Bolt the Lightning Panther | Emerald, Gold & Amber | Athletics & Tournament Concierge |
+| **`ACADEMIC`** | 🦦 Atom the Discovery Otter | Emerald, Teal & Slate | Science & Research Concierge |
+| **`BUSINESS`** | 🦅 Apex the Visionary Falcon | Sky Blue & Charcoal | Leadership & Summit Concierge |
+| **`ENTERTAINMENT`**| 🦊 Aria the Melody Fox | Violet, Purple & Rose | Campus Festival Concierge |
+| **`GENERAL`** | ✨ Nova the Campus Spark | Crimson Wine & Gold | Official EventHub Concierge |
+
+---
+
+## 10. Four-Device Presentation Architecture
+
+EventHub is optimized for live final-round presentations utilizing four separate devices simultaneously:
+
+```
+┌───────────────────────────┐      ┌───────────────────────────┐
+│     DEVICE 1: ADMIN       │      │   DEVICE 2: ORGANIZER     │
+│   (Tanishka Ghewari)      │      │       (Payal Mane)        │
+│  • Reviews & Approves     │      │  • Drafts & Publishes     │
+│  • Global Platform Audit  │      │  • AI Volunteer Matching  │
+└─────────────┬─────────────┘      └─────────────┬─────────────┘
+              │                                  │
+              └───────────────┐  ┌───────────────┘
+                              ▼  ▼
+                    ┌──────────────────────┐
+                    │  EVENTHUB PRODUCTION │
+                    │     SHARED CLOUD     │
+                    └─────────┬──┬─────────┘
+                              ▲  ▲
+              ┌───────────────┘  └───────────────┐
+              │                                  │
+┌─────────────┴─────────────┐      ┌─────────────┴─────────────┐
+│    DEVICE 3: ATTENDEE     │      │   DEVICE 4: VOLUNTEER     │
+│      (Mahi Kasliwal)      │      │      (Nehal Ahuja)        │
+│  • AI Thematic Concierge  │      │  • Receives Assignment    │
+│  • Registers & Pays (QR)  │      │  • Camera QR Gate Scan    │
+└───────────────────────────┘      └───────────────────────────┘
+```
+
+All four devices connect to the same cloud deployment, demonstrating live end-to-end event operations across all roles.
+
+---
+
+## 11. Technology Stack
 
 ### Frontend
-- **Framework**: React `v18.3.1` + TypeScript `v5.9.3`
-- **Build Tool**: Vite `v7.3.6`
-- **Routing**: Wouter `v3.3.5`
-- **State Management & Data Fetching**: TanStack React Query `v5.66.0`
-- **Styling**: Vanilla CSS + TailwindCSS `v4.0.0` + Radix UI Primitives
-- **Animations**: Framer Motion `v12.4.7`
-- **Charts**: Recharts `v2.15.2`
-- **QR Scanner**: `html5-qrcode` `v2.3.8`
-- **Icons**: Lucide React `v0.475.0`
+* **Core Library**: React v18.3.1
+* **Language**: TypeScript v5.7.2
+* **Build Tool & Bundler**: Vite v7.3.6
+* **Routing**: Wouter v3.7.1
+* **State & Data Fetching**: TanStack React Query v5.69.0
+* **Styling**: Vanilla TailwindCSS v4.0.0
+* **UI Primitives**: Radix UI (Dialog, Dropdown, Tabs, Toast, Slot, Progress)
+* **Icons**: Lucide React v1.16.0
+* **Charts & Analytics**: Recharts v2.15.4
+* **Motion & Animations**: Framer Motion v12.42.0
 
-### Backend
-- **Runtime**: Node.js `v22.23.2`
-- **Framework**: Express `v5.2.1`
-- **Database & ORM**: PostgreSQL + Drizzle ORM `v0.40.0`
-- **Real-Time Communication**: Socket.IO `v4.8.3`
-- **Authentication**: `jsonwebtoken` `v9.0.3` + `bcrypt` `v6.0.0`
-- **Email Service**: Resend SDK `v4.1.0` + Nodemailer `v9.0.4`
-- **QR Code Generator**: `qrcode` `v1.5.4`
-- **Rate Limiting**: `express-rate-limit` `v8.6.2`
-- **Validation**: Zod `v3.24.2`
+### Backend & API
+* **Runtime**: Node.js (ES Modules)
+* **Web Framework**: Express v5.0.0
+* **Realtime Engine**: Socket.IO v4.8.1
+* **Security & Rate Limiting**: `express-rate-limit`, `cors`, `cookie-parser`
+* **Validation**: Zod v3.24.2 / `@workspace/api-zod`
+* **Logging**: Pino & Pino-Http v10.4.0
 
----
+### Database & ORM
+* **Database**: PostgreSQL (Neon Cloud Serverless Postgres / `serverless-pg`)
+* **ORM**: Drizzle ORM v0.40.0
+* **Database Migrations**: Drizzle Kit v0.30.5
 
-## 📁 Folder Structure
-
-```
-Web-Application-Builder/
-├── artifacts/
-│   ├── api-server/              # Backend Express API Server & Socket.IO Services
-│   │   ├── src/
-│   │   │   ├── lib/             # Auth, Email, QR Code, Rate Limit & Socket Services
-│   │   │   ├── middlewares/     # Authentication & Error Middlewares
-│   │   │   ├── routes/          # REST API Route Handlers
-│   │   │   ├── app.ts           # Express Application Setup & Middleware Wiring
-│   │   │   ├── index.ts         # Server Entry Point & Process Bootstrap
-│   │   │   └── seed.ts          # Database Seeding Script
-│   │   ├── .env.example         # Server Environment Variable Template
-│   │   └── package.json
-│   │
-│   ├── eventhub/                # Frontend React SPA Application
-│   │   ├── src/
-│   │   │   ├── components/      # UI Components & Layout Systems
-│   │   │   ├── hooks/           # Custom React Hooks
-│   │   │   ├── lib/             # Client Utilities & Query Helpers
-│   │   │   ├── pages/           # Public & Dashboard Page Views
-│   │   │   │   └── dashboard/   # Attendee, Organizer, Volunteer & Admin Views
-│   │   │   ├── App.tsx          # Application Router & Global Context Providers
-│   │   │   └── main.tsx         # React Client Entry Point
-│   │   ├── index.html
-│   │   └── package.json
-│   │
-│   └── mockups/                 # UI Mockups & Asset Exports
-│
-├── lib/
-│   ├── api-client-react/        # React Query Hooks Generated for API Client
-│   ├── api-zod/                 # Shared Zod Schemas & Contract Types
-│   └── db/                      # Drizzle Database Schemas & Migrations
-│       └── src/schema/          # Users, Events, Registrations, Checkins, Tasks
-│
-├── .env.example                 # Root Environment Template
-├── package.json                 # Root Workspace Configuration (pnpm Workspaces)
-└── README.md                    # Project Documentation
-```
+### Payments & QR
+* **Payment Gateway**: Razorpay SDK v2.9.5 (HMAC-SHA256 Cryptographic Verification)
+* **QR Generation**: QRCode v1.5.4
+* **QR Camera Scanner**: HTML5-QRCode v2.3.8
 
 ---
 
-## ⚙️ Installation
+## 12. System Architecture
 
-### Prerequisites
-- **Node.js**: `v18.0.0` or higher (Recommended: `v22.x`)
-- **Package Manager**: `pnpm` `v11.x` or `npm` / `yarn`
+```mermaid
+flowchart TD
+    subgraph ClientLayer["Frontend Client (React 18 + Vite)"]
+        UI["TailwindCSS Responsive UI"]
+        WouterRouter["Wouter Client Router"]
+        ReactQuery["TanStack React Query Cache"]
+        SocketClient["Socket.IO Realtime Client"]
+    end
 
-### Step-by-Step Setup
+    subgraph APILayer["Backend Serverless / Express API"]
+        AuthMiddleware["JWT & Session Auth Guards"]
+        RBAC["Role-Based Access Control"]
+        RestRouter["REST API Endpoints"]
+        SocketServer["Socket.IO Event Broadcaster"]
+    end
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/payalmane21/TechRush.git
-   cd Web-Application-Builder
-   ```
+    subgraph ServiceLayer["Specialized Engines"]
+        AIService["AI Chatbot & Mascot Synthesis"]
+        VLMService["AI Volunteer Matcher"]
+        PaymentService["Razorpay Payment Verification"]
+        QRService["Cryptographic QR Ticket Engine"]
+    end
 
-2. **Install Workspace Dependencies**:
-   ```bash
-   pnpm install
-   ```
+    subgraph StorageLayer["Data & Persistence"]
+        PostgresDB[("PostgreSQL Database (Drizzle ORM)")]
+        InMemoryStore[("Resilient Memory Cache")]
+    end
 
-3. **Configure Environment Variables**:
-   Copy `.env.example` to `.env` in both the root workspace and `artifacts/api-server/`:
-   ```bash
-   cp .env.example .env
-   cp artifacts/api-server/.env.example artifacts/api-server/.env
-   ```
+    UI --> WouterRouter --> ReactQuery
+    ReactQuery <-->|"HTTP / REST"| RestRouter
+    SocketClient <-->|"WebSockets"| SocketServer
 
-4. **Run the Development Server**:
-   Start the backend API server and frontend dev server concurrently:
-   ```bash
-   # Terminal 1: Launch API Server (Port 5000)
-   pnpm --filter @workspace/api-server run dev
-
-   # Terminal 2: Launch React Frontend (Port 5173 / Port 5000)
-   pnpm --filter @workspace/eventhub run dev
-   ```
-
-5. **Build for Production**:
-   ```bash
-   pnpm run build
-   ```
-
----
-
-## 🔑 Environment Variables
-
-### `.env.example`
-
-```env
-# Real Transactional Email Provider (Resend API)
-RESEND_API_KEY=re_your_resend_api_key_here
-RESEND_FROM=EventHub Verification <onboarding@resend.dev>
-
-# Hackathon Demo Mode Configuration
-# When EMAIL_DEMO_MODE=true, emails redirect to VERIFIED_DEMO_EMAIL while storing the real user in DB
-EMAIL_DEMO_MODE=true
-VERIFIED_DEMO_EMAIL=payalmane2107@gmail.com
-
-# Optional Gmail SMTP Credentials
-EMAIL_USER=your.gmail.address@gmail.com
-EMAIL_PASS=your_16_character_app_password
-
-# Authentication & JWT Security
-JWT_SECRET=your_super_secret_jwt_key_32_characters_minimum
-
-# Database Connection
-MONGODB_URI=mongodb://localhost:27017/eventhub
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/eventhub
-
-# Application Server Port
-PORT=5000
+    RestRouter --> AuthMiddleware --> RBAC
+    RBAC --> ServiceLayer
+    ServiceLayer --> StorageLayer
 ```
 
 ---
 
-## 📑 API Documentation
+## 13. API Route Reference
 
-| Method | Route | Description | Auth Required | Expected Response |
-| :--- | :--- | :--- | :---: | :--- |
-| `POST` | `/api/auth/signup` | Register new user account & dispatch verification email | No | `201 Created` `{ message, email }` |
-| `POST` | `/api/auth/login` | Authenticate user credentials & set JWT cookies | No | `200 OK` `{ user, token }` |
-| `POST` | `/api/auth/verify-otp` | Verify 6-digit OTP code & activate user account | No | `200 OK` `{ user, token }` |
-| `POST` | `/api/auth/resend-otp` | Resend verification email with rate-limit cooldown | No | `200 OK` `{ message }` |
-| `POST` | `/api/auth/forgot-password` | Generate reset token & send password reset email | No | `200 OK` `{ message }` |
-| `POST` | `/api/auth/reset-password` | Update password using valid reset token | No | `200 OK` `{ message }` |
-| `GET` | `/api/auth/me` | Fetch authenticated user profile details | Yes | `200 OK` `{ user }` |
-| `POST` | `/api/auth/logout` | Clear refresh token cookie & destroy session | Yes | `200 OK` `{ message }` |
-| `GET` | `/api/events` | List published events with category & query filters | No | `200 OK` `{ events: [] }` |
-| `GET` | `/api/events/:id` | Fetch specific event details by ID | No | `200 OK` `{ event }` |
-| `POST` | `/api/events` | Create new event (Organizers / Admins) | Yes (Organizer) | `201 Created` `{ event }` |
-| `PATCH` | `/api/events/:id` | Update event information & publishing status | Yes (Organizer) | `200 OK` `{ event }` |
-| `DELETE` | `/api/events/:id` | Delete event by ID | Yes (Organizer) | `200 OK` `{ success: true }` |
-| `POST` | `/api/registrations` | Register attendee for event & generate QR pass | Yes | `201 Created` `{ registration, qrCodeDataUrl }` |
-| `GET` | `/api/registrations/my` | List current user's event registrations | Yes | `200 OK` `{ registrations: [] }` |
-| `POST` | `/api/checkin/scan` | Scan QR pass token for attendee check-in/out | Yes (Volunteer) | `200 OK` `{ success, attendeeName, action }` |
-| `GET` | `/api/checkin/logs/:eventId` | Fetch audit log of check-in scans for event | Yes (Organizer) | `200 OK` `{ logs: [] }` |
-| `POST` | `/api/volunteers/apply` | Submit application to volunteer for event | Yes | `201 Created` `{ application }` |
-| `GET` | `/api/volunteers/applications` | List pending volunteer applications | Yes (Organizer) | `200 OK` `{ applications: [] }` |
-| `PATCH` | `/api/volunteers/applications/:id` | Approve/reject application & promote role | Yes (Organizer) | `200 OK` `{ application }` |
-| `POST` | `/api/tasks` | Create volunteer task assignment | Yes (Organizer) | `201 Created` `{ task }` |
-| `POST` | `/api/tasks/:id/assign` | Assign volunteer user to specific task | Yes (Organizer) | `200 OK` `{ assignment }` |
-| `PATCH` | `/api/tasks/:id/status` | Update task completion status | Yes (Volunteer) | `200 OK` `{ task }` |
-| `GET` | `/api/dashboard/analytics` | Aggregate event analytics & registration statistics | Yes (Organizer) | `200 OK` `{ metrics, charts }` |
-| `GET` | `/api/dashboard/attendance/:eventId` | Real-time attendance rate & check-in metrics | Yes (Organizer) | `200 OK` `{ stats, logs }` |
+### 🔐 Authentication (`/api/auth`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/signup` | Public | Register new attendee or volunteer account |
+| `POST` | `/api/auth/login` | Public | Authenticate with email & password |
+| `POST` | `/api/auth/demo-login` | Public | Authenticate 4 permanent demo accounts |
+| `POST` | `/api/auth/logout` | Authenticated | Terminate session and clear cookies |
+| `GET` | `/api/auth/me` | Authenticated | Retrieve authenticated user profile |
+
+### 📅 Events (`/api/events`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/events` | Public | List published events with category/search filters |
+| `GET` | `/api/events/:id` | Public | Get complete event details |
+| `POST` | `/api/events` | Organizer, Admin | Create event draft |
+| `PUT` | `/api/events/:id` | Organizer, Admin | Update existing event |
+| `POST` | `/api/events/:id/submit-approval` | Organizer | Submit event for admin review |
+| `POST` | `/api/events/:id/approve` | Admin | Approve pending event |
+| `POST` | `/api/events/:id/reject` | Admin | Reject event with reason |
+| `POST` | `/api/events/:id/publish` | Organizer | Publish approved event |
+| `POST` | `/api/events/mascot/generate` | Organizer, Admin | Synthesize new AI event mascot |
+
+### 🎟️ Registrations & QR (`/api/registrations`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/registrations/my` | Attendee | List current attendee's confirmed tickets |
+| `POST` | `/api/registrations` | Attendee | Register for free event |
+| `GET` | `/api/events/:id/registrations` | Organizer, Admin | View event attendee roster |
+
+### 💳 Payments (`/api/payments`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/payments/create-order` | Attendee | Create Razorpay payment order |
+| `POST` | `/api/payments/verify` | Attendee | Cryptographically verify HMAC-SHA256 signature and issue QR pass |
+| `GET` | `/api/payments/ledger` | Admin | Retrieve university payment ledger |
+
+### 🤝 Volunteers (`/api/volunteers`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/volunteers/requirements` | Public | Browse event volunteer requirements |
+| `POST` | `/api/volunteers/requirements` | Organizer | Post new volunteer requirement |
+| `POST` | `/api/volunteers/apply` | Volunteer | Submit application with skills/resume |
+| `GET` | `/api/volunteers/my-applications` | Volunteer | View application & assignment status |
+| `POST` | `/api/events/:id/volunteers/ai-match` | Organizer | Compute AI skill match scores |
+| `POST` | `/api/events/:id/volunteers/assign` | Organizer | Assign volunteer to duty role |
+
+### 🤖 AI Chatbot & Group Chat (`/api/chat`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/chat/attendee` | Attendee | Event-grounded AI concierge chat |
+| `GET` | `/api/chat/messages` | Authenticated | Fetch team group chat history |
+| `POST` | `/api/chat/messages` | Authenticated | Send message to real-time group chat |
+
+### 📷 Attendance & Check-In (`/api/checkin`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/checkin/validate-qr` | Volunteer, Organizer | Validate QR token at entrance |
+| `POST` | `/api/checkin/process` | Volunteer, Organizer | Check in attendee with duplicate guard |
+| `POST` | `/api/checkin/checkout` | Volunteer, Organizer | Log attendee check-out |
 
 ---
 
-## 🗄️ Database Schema
-
-EventHub uses Drizzle ORM to manage database relations across 7 main tables:
+## 14. Database Schema Entities
 
 ```mermaid
 erDiagram
-    users ||--o{ registrations : "registers for"
-    users ||--o{ volunteer_applications : "applies as"
-    users ||--o{ task_assignments : "assigned to"
-    events ||--o{ registrations : "contains"
-    events ||--o{ checkin_logs : "tracks"
-    events ||--o{ tasks : "organizes"
-    registrations ||--o{ checkin_logs : "validates"
-    tasks ||--o{ task_assignments : "has"
+    USERS ||--o{ EVENTS : organizes
+    USERS ||--o{ REGISTRATIONS : registers
+    USERS ||--o{ VOLUNTEER_APPLICATIONS : submits
+    USERS ||--o{ PAYMENTS : pays
+    USERS ||--o{ CHAT_MESSAGES : sends
+    USERS ||--o{ NOTIFICATIONS : receives
+    
+    EVENTS ||--o{ REGISTRATIONS : contains
+    EVENTS ||--o{ VOLUNTEER_REQUIREMENTS : defines
+    EVENTS ||--o{ VOLUNTEER_APPLICATIONS : receives
+    EVENTS ||--o{ PAYMENTS : generates
 
-    users {
+    USERS {
         int id PK
         string name
-        string email UK
+        string email
         string passwordHash
-        string role "admin | organizer | volunteer | attendee"
-        boolean isEmailVerified
-        timestamp createdAt
+        string role
+        string phone
+        string collegeId
     }
 
-    events {
+    EVENTS {
         int id PK
+        int organizerId FK
         string title
-        string description
-        string location
+        string category
+        string venue
         timestamp startTime
         timestamp endTime
         int capacity
-        string status "draft | published | completed"
-        int organizerId FK
+        int price
+        string status
+        string mascotUrl
+        string mascotPrompt
     }
 
-    registrations {
+    REGISTRATIONS {
         int id PK
+        int eventId FK
         int userId FK
-        int eventId FK
-        string ticketCode UK
-        string qrCodeDataUrl
-        string status "registered | checked_in | canceled"
-        timestamp createdAt
+        string qrToken
+        string status
+        string paymentStatus
+        int amountPaid
+        timestamp checkedInAt
     }
 
-    checkin_logs {
+    PAYMENTS {
         int id PK
         int eventId FK
-        int registrationId FK
-        int scannedByUserId FK
-        string action "check_in | check_out"
-        string station
-        timestamp timestamp
-    }
-
-    volunteer_applications {
-        int id PK
         int userId FK
-        int eventId FK
-        string status "pending | approved | rejected"
-        timestamp createdAt
+        string orderId
+        string paymentId
+        string signature
+        int amount
+        string status
     }
 
-    tasks {
+    VOLUNTEER_APPLICATIONS {
         int id PK
         int eventId FK
-        string title
-        string description
-        string status "pending | in_progress | completed"
+        int userId FK
+        string skills
+        string experience
+        string status
+        string assignedRole
+        int matchScore
     }
 ```
 
 ---
 
-## 🔐 Authentication & Security Workflow
+## 15. Security & Governance
+
+* **Role-Based Access Control (RBAC)**: Strict backend authorization enforcement (`admin`, `organizer`, `attendee`, `volunteer`).
+* **Salted Password Hashing**: Passwords hashed using bcrypt.
+* **Server-Side Payment Verification**: Razorpay signatures verified against cryptographic HMAC-SHA256 secrets.
+* **Fraud-Proof QR Passes**: Digitally generated QR tokens containing unique verifiable registration identifiers.
+* **Duplicate Gate Entry Protection**: Real-time validation preventing passes from being checked in multiple times.
+* **Capacity Overrun Protection**: Strict database-level transaction limits preventing ticket overselling.
+
+---
+
+## 16. Local Development Setup
+
+### Prerequisites
+* **Node.js**: v20.x or higher
+* **pnpm**: v9.x or higher
+
+### Installation & Run Commands
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/payalmane21/TechRush.git
+cd TechRush
+
+# 2. Install workspace dependencies
+pnpm install
+
+# 3. Start local development server (Frontend + API)
+pnpm run dev
+
+# 4. Build production bundle
+pnpm run build
+
+# 5. Run automated test suites
+node scratch/test_ai_event_mascot.mjs
+node scratch/test_ai_chatbot_mascot_theming.mjs
+node scratch/test_realtime_group_chat.mjs
+```
+
+### Environment Variables
+Configure the following keys in your environment (`.env`):
+```env
+PORT=5000
+NODE_ENV=production
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+RAZORPAY_KEY_ID=rzp_test_key
+RAZORPAY_KEY_SECRET=your_secret_key
+SESSION_SECRET=your_session_secret
+```
+
+---
+
+## 17. Live Demonstration Flow
 
 ```
-[User Sign Up]
-      │
-      ▼
-[Bcrypt Salted Password Hashing (Cost Factor 12)]
-      │
-      ▼
-[Store Pending Account (isEmailVerified = false)]
-      │
-      ▼
-[Generate 6-Digit OTP & 256-Bit Token (10-Min Expiry)]
-      │
-      ▼
-[Dispatch Email via Resend API / Gmail SMTP]
-      │
-      ▼
-[User Submits Code / Clicks Link → Set isEmailVerified = true]
-      │
-      ▼
-[Issue 15m Access Token + 7d Refresh Cookie (httpOnly, sameSite: lax)]
-      │
-      ▼
-[Grant Access to Protected Dashboard Routes via RBAC Middleware]
+1. ADMIN (Device 1)
+   └── Reviews and approves pending event proposals with 1 click.
+
+2. ORGANIZER (Device 2)
+   ├── Uses AI Event Mascot Studio to generate a thematic character.
+   ├── Publishes the approved event live.
+   └── Monitors real-time capacity and revenue feeds.
+
+3. ATTENDEE (Device 3)
+   ├── Interacts with the event-themed AI Concierge Chatbot.
+   ├── Registers and completes verified Razorpay payment.
+   └── Receives instant cryptographic QR pass.
+
+4. VOLUNTEER (Device 4)
+   ├── Receives AI-matched duty assignment from organizer.
+   └── Scans attendee QR passes at gate entrance using live camera.
+
+5. ALL FOUR ROLES (Devices 1-4)
+   └── Coordinate in real time using the unified EventHub Live Team Chat!
 ```
 
 ---
 
-## 📷 Screenshots
+## 18. Project Goal
 
-### Home Page & Public Portal
-![Home Page](file:///C:/Users/payal/.gemini/antigravity/brain/a2921e4e-7ee3-4160-a443-28f515b3ea76/media__1786012087557.png)
-
-### Organizer Events Control Dashboard
-![Organizer Events Control Dashboard](file:///C:/Users/payal/.gemini/antigravity/brain/a2921e4e-7ee3-4160-a443-28f515b3ea76/organizer_events_fixed.png)
-
-### Live Event Analytics
-![Live Event Analytics](file:///C:/Users/payal/.gemini/antigravity/brain/a2921e4e-7ee3-4160-a443-28f515b3ea76/media__1786027920038.png)
-
-### Attendee Digital Ticket Pass
-![Attendee Digital Ticket Pass](file:///C:/Users/payal/.gemini/antigravity/brain/a2921e4e-7ee3-4160-a443-28f515b3ea76/media__1786040842659.png)
-
----
-
-## ⚡ Performance Optimizations
-
-1. **Vite Manual Chunking**: Separates vendor React, Lucide icons, and Recharts binaries into dedicated chunks for accelerated browser caching.
-2. **TanStack React Query Caching**: Eliminates redundant network requests by caching API query responses with automatic background refetching.
-3. **Optimized QR Camera Stream**: Configured single-viewport `html5-qrcode` rendering at 15 FPS with dynamic aspect ratio bounding.
-4. **Zero-Downtime Database Architecture**: Thread-safe in-memory store mirrors PostgreSQL operations, guaranteeing zero downtime if external DB connections drop.
-5. **Debounced Search & Category Filtering**: Implemented client-side input debouncing to prevent API spamming during live searches.
-
----
-
-## 🔮 Future Improvements
-
-- [ ] **NFC Card Check-in**: Support physical tap-to-enter hardware readers for ultra-high-density entrance gates.
-- [ ] **AI Event Assistant**: Automated schedule optimization and AI-generated event descriptions.
-- [ ] **Offline Scanner Mode**: Cache check-in scans locally in IndexedDB when internet connectivity drops, syncing automatically upon reconnection.
-- [ ] **Certificate PDF Builder**: Automated digital certificate generation with verifiable SHA-256 signatures for volunteers and attendees.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. **Fork the Repository**
-2. **Create a Feature Branch**: `git checkout -b feature/amazing-feature`
-3. **Commit Your Changes**: `git commit -m 'Add amazing feature'`
-4. **Push to the Branch**: `git push origin feature/amazing-feature`
-5. **Open a Pull Request**
-
----
-
-## 📜 License
-
-Distributed under the **MIT License**. See `LICENSE` for details.
-
----
-
-## 👥 Team
-
-* **Payal Mane** — Lead Full-Stack Architect & Core Developer
-
----
-
-## 🙏 Acknowledgements
-
-* **TechRush 2026 Hackathon Committee**
-* **Google DeepMind Antigravity Team**
-* **Resend & Nodemailer Communities**
+**EventHub** aims to provide a unified, intelligent, and real-time platform for managing the complete event lifecycle while reducing administrative overhead, preventing fraud, and delivering seamless experiences for organizers, attendees, volunteers, and campus administrators alike.
