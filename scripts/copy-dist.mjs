@@ -12,6 +12,14 @@ try {
   } else {
     console.warn('Source artifacts/eventhub/dist directory not found.');
   }
+
+  const apiSrc = path.resolve('api/index.js');
+  const apiDest = path.resolve('artifacts/eventhub/api/index.js');
+  if (fs.existsSync(apiSrc)) {
+    fs.mkdirSync(path.dirname(apiDest), { recursive: true });
+    fs.copyFileSync(apiSrc, apiDest);
+    console.log('Successfully synced api/index.js to artifacts/eventhub/api/index.js');
+  }
 } catch (err) {
   console.error('Copy script warning:', err);
 }
