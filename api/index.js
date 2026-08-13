@@ -79947,6 +79947,9 @@ var getHealthStatus = () => ({
   environment: process.env.NODE_ENV || "production",
   emailDemoMode: process.env.EMAIL_DEMO_MODE === "true"
 });
+router.get("/", (_req, res) => {
+  res.json(getHealthStatus());
+});
 router.get("/healthz", (_req, res) => {
   res.json(getHealthStatus());
 });
