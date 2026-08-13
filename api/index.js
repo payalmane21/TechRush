@@ -91201,11 +91201,16 @@ app.use(
 );
 app.use(import_express13.default.json({ limit: "10mb" }));
 app.use(import_express13.default.urlencoded({ extended: true }));
-var sessionStore = process.env.DATABASE_URL ? new PgSession2({
-  pool,
-  tableName: "session",
-  createTableIfMissing: true
-}) : new import_express_session.default.MemoryStore();
+var sessionStore;
+try {
+  sessionStore = process.env.DATABASE_URL && process.env.USE_PG_SESSION === "true" ? new PgSession2({
+    pool,
+    tableName: "session",
+    createTableIfMissing: false
+  }) : new import_express_session.default.MemoryStore();
+} catch {
+  sessionStore = new import_express_session.default.MemoryStore();
+}
 app.use(
   (0, import_express_session.default)({
     store: sessionStore,
@@ -91252,6 +91257,12 @@ if (fs2.existsSync(staticPath)) {
     }
   });
 }
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    error: err.message || "Internal server error"
+  });
+});
 var app_default = app;
 export {
   app_default as default
