@@ -276,13 +276,6 @@ router.post("/payments/verify", requireAuth, async (req, res): Promise<void> => 
       .where(eq(paymentsTable.orderId, orderId));
   } catch {}
 
-  try {
-    const { inMemoryRegistrations, globalRegistrationsList } = await import("./registrations");
-    const userEventKey = `${userId}:${numEventId}`;
-    inMemoryRegistrations.set(userEventKey, confirmedObj);
-    globalRegistrationsList.unshift(confirmedObj);
-  } catch {}
-
   // Real-Time Socket.IO Notification to Organizers and Admins
   const io = getIo();
   if (io) {

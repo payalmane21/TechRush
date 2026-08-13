@@ -13,6 +13,21 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
+// Vercel Serverless Path Normalizer (Restores original requested URL when rewrites route to /api/index.js)
+app.use((req, _res, next) => {
+  const original =
+    (req.headers["x-matched-path"] as string) ||
+    (req.headers["x-forwarded-url"] as string) ||
+    (req.headers["x-vercel-matched-path"] as string);
+
+  if (original && (original.startsWith("/api") || original === "/api")) {
+    const queryIndex = req.url.indexOf("?");
+    const queryString = queryIndex !== -1 ? req.url.slice(queryIndex) : "";
+    req.url = original.includes("?") ? original : `${original}${queryString}`;
+  }
+  next();
+});
+
 app.use(
   pinoHttp({
     logger,
@@ -44,18 +59,14 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-let sessionStore;
-try {
-  sessionStore = (process.env.DATABASE_URL && process.env.USE_PG_SESSION === "true")
-    ? new PgSession({
-        pool,
-        tableName: "session",
-        createTableIfMissing: false,
-      })
-    : new session.MemoryStore();
-} catch {
-  sessionStore = new session.MemoryStore();
-}
+const sessionStore = process.env.DATABASE_URL
+  ? new PgSession({
+      pool,
+      tableName: "session",
+      createTableIfMissing: true,
+      errorLog: () => {},
+    })
+  : new session.MemoryStore();
 
 app.use(
   session({
@@ -109,13 +120,5 @@ if (fs.existsSync(staticPath)) {
     }
   });
 }
-
-// Fallback JSON Error Handler for API routes
-app.use((err: any, req: any, res: any, next: any) => {
-  if (res.headersSent) return next(err);
-  res.status(err.status || 500).json({
-    error: err.message || "Internal server error",
-  });
-});
 
 export default app;

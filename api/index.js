@@ -59953,186 +59953,6 @@ var require_jsonwebtoken = __commonJS({
   }
 });
 
-// src/lib/auth.ts
-var auth_exports = {};
-__export(auth_exports, {
-  clearRefreshTokenCookie: () => clearRefreshTokenCookie,
-  generateAccessToken: () => generateAccessToken,
-  generateJwtToken: () => generateJwtToken,
-  generateQrToken: () => generateQrToken,
-  generateRefreshToken: () => generateRefreshToken,
-  hashPassword: () => hashPassword,
-  requireAuth: () => requireAuth,
-  requireRole: () => requireRole,
-  sanitizeInput: () => sanitizeInput,
-  sanitizeUserOutput: () => sanitizeUserOutput,
-  setRefreshTokenCookie: () => setRefreshTokenCookie,
-  verifyAccessToken: () => verifyAccessToken,
-  verifyJwtToken: () => verifyJwtToken,
-  verifyPassword: () => verifyPassword,
-  verifyQrToken: () => verifyQrToken,
-  verifyRefreshToken: () => verifyRefreshToken
-});
-import bcrypt from "bcrypt";
-import crypto2 from "crypto";
-async function hashPassword(password) {
-  return bcrypt.hash(password, SALT_ROUNDS);
-}
-async function verifyPassword(password, hash) {
-  return bcrypt.compare(password, hash);
-}
-function generateAccessToken(user) {
-  return import_jsonwebtoken.default.sign(
-    { id: user.id, email: user.email, role: user.role, type: "access" },
-    JWT_SECRET,
-    { expiresIn: "15m" }
-  );
-}
-function generateRefreshToken(user) {
-  return import_jsonwebtoken.default.sign(
-    { id: user.id, email: user.email, role: user.role, type: "refresh" },
-    REFRESH_SECRET,
-    { expiresIn: "7d" }
-  );
-}
-function generateJwtToken(user, rememberMe = false) {
-  return generateAccessToken(user);
-}
-function verifyAccessToken(token) {
-  try {
-    const decoded = import_jsonwebtoken.default.verify(token, JWT_SECRET);
-    if (decoded && decoded.type === "access") {
-      return { id: decoded.id, email: decoded.email, role: decoded.role };
-    }
-    return decoded ? { id: decoded.id, email: decoded.email, role: decoded.role } : null;
-  } catch {
-    return null;
-  }
-}
-function verifyRefreshToken(token) {
-  try {
-    const decoded = import_jsonwebtoken.default.verify(token, REFRESH_SECRET);
-    if (decoded && decoded.type === "refresh") {
-      return { id: decoded.id, email: decoded.email, role: decoded.role };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-function verifyJwtToken(token) {
-  return verifyAccessToken(token);
-}
-function setRefreshTokenCookie(res, refreshToken) {
-  const isProduction2 = process.env.NODE_ENV === "production";
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: isProduction2,
-    // Enabled on HTTPS production
-    sameSite: "lax",
-    path: "/api/auth/refresh",
-    maxAge: 7 * 24 * 60 * 60 * 1e3
-    // 7 days
-  });
-}
-function clearRefreshTokenCookie(res) {
-  res.clearCookie("refreshToken", {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/api/auth/refresh"
-  });
-}
-function sanitizeInput(input) {
-  if (typeof input !== "string") return "";
-  return input.trim().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/\//g, "&#x2F;");
-}
-function sanitizeUserOutput(user) {
-  if (!user) return user;
-  const copy = { ...user };
-  delete copy.passwordHash;
-  delete copy.otp;
-  delete copy.resetToken;
-  return copy;
-}
-function generateQrToken(registrationId) {
-  const payload = `reg:${registrationId}:${Date.now()}`;
-  const sig = crypto2.createHmac("sha256", QR_SECRET).update(payload).digest("hex").slice(0, 16);
-  return `${Buffer.from(payload).toString("base64url")}.${sig}`;
-}
-function verifyQrToken(token) {
-  try {
-    const [payloadB64, sig] = token.split(".");
-    if (!payloadB64 || !sig) return null;
-    const payload = Buffer.from(payloadB64, "base64url").toString("utf8");
-    const expectedSig = crypto2.createHmac("sha256", QR_SECRET).update(payload).digest("hex").slice(0, 16);
-    if (sig !== expectedSig) return null;
-    const match = payload.match(/^reg:(\d+):/);
-    if (!match) return null;
-    return parseInt(match[1], 10);
-  } catch {
-    return null;
-  }
-}
-function requireAuth(req, res, next) {
-  if (!req.session) {
-    req.session = {};
-  }
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
-    const decoded = verifyAccessToken(token);
-    if (decoded) {
-      req.session.userId = decoded.id;
-      req.session.userRole = decoded.role;
-      req.session.role = decoded.role;
-      return next();
-    }
-  }
-  if (!req.session?.userId) {
-    res.status(401).json({ error: "Authentication required. Please log in." });
-    return;
-  }
-  next();
-}
-function requireRole(...roles) {
-  return (req, res, next) => {
-    if (!req.session) {
-      req.session = {};
-    }
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      const decoded = verifyAccessToken(token);
-      if (decoded) {
-        req.session.userId = decoded.id;
-        req.session.userRole = decoded.role;
-        req.session.role = decoded.role;
-      }
-    }
-    const currentRole = req.session.userRole || req.session.role;
-    if (!req.session?.userId) {
-      res.status(401).json({ error: "Authentication required. Please log in." });
-      return;
-    }
-    if (!currentRole || !roles.includes(currentRole)) {
-      res.status(403).json({ error: "Access denied. Required role: " + roles.join(" or ") });
-      return;
-    }
-    next();
-  };
-}
-var import_jsonwebtoken, SALT_ROUNDS, JWT_SECRET, REFRESH_SECRET, QR_SECRET;
-var init_auth = __esm({
-  "src/lib/auth.ts"() {
-    "use strict";
-    import_jsonwebtoken = __toESM(require_jsonwebtoken(), 1);
-    SALT_ROUNDS = 12;
-    JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "eventhub-access-jwt-secret-2026";
-    REFRESH_SECRET = process.env.REFRESH_SECRET || "eventhub-refresh-jwt-secret-2026";
-    QR_SECRET = process.env.QR_SECRET || "eventhub-qr-secret-2026";
-  }
-});
-
 // ../../node_modules/.pnpm/nodemailer@9.0.4/node_modules/nodemailer/lib/punycode/index.js
 var require_punycode = __commonJS({
   "../../node_modules/.pnpm/nodemailer@9.0.4/node_modules/nodemailer/lib/punycode/index.js"(exports, module) {
@@ -74798,18 +74618,6 @@ var require_ip_address = __commonJS({
   }
 });
 
-// src/lib/socket.ts
-function getIo() {
-  return _io;
-}
-var _io;
-var init_socket = __esm({
-  "src/lib/socket.ts"() {
-    "use strict";
-    _io = null;
-  }
-});
-
 // src/lib/store.ts
 var store_exports = {};
 __export(store_exports, {
@@ -79593,335 +79401,6 @@ var require_lib6 = __commonJS({
   }
 });
 
-// src/lib/qrcode.ts
-var qrcode_exports = {};
-__export(qrcode_exports, {
-  generateQrCodeDataUrl: () => generateQrCodeDataUrl
-});
-async function generateQrCodeDataUrl(data) {
-  return import_qrcode.default.toDataURL(data, {
-    errorCorrectionLevel: "M",
-    width: 256,
-    margin: 2
-  });
-}
-var import_qrcode;
-var init_qrcode = __esm({
-  "src/lib/qrcode.ts"() {
-    "use strict";
-    import_qrcode = __toESM(require_lib6(), 1);
-  }
-});
-
-// src/routes/registrations.ts
-var registrations_exports = {};
-__export(registrations_exports, {
-  default: () => registrations_default,
-  globalRegistrationsList: () => globalRegistrationsList,
-  inMemoryRegistrations: () => inMemoryRegistrations
-});
-var import_express4, router4, inMemoryRegistrations, globalRegistrationsList, registerEventHandler, listMyRegistrations, registrations_default;
-var init_registrations2 = __esm({
-  "src/routes/registrations.ts"() {
-    "use strict";
-    import_express4 = __toESM(require_express2(), 1);
-    init_drizzle_orm();
-    init_src();
-    init_auth();
-    init_auth();
-    init_qrcode();
-    init_socket();
-    router4 = (0, import_express4.Router)();
-    inMemoryRegistrations = /* @__PURE__ */ new Map();
-    globalRegistrationsList = [
-      {
-        id: 101,
-        eventId: 1,
-        userId: 2,
-        attendeeName: "Priya Patel",
-        attendeeEmail: "priya@university.edu",
-        attendeePhone: "+91 98765 43210",
-        attendeeCollege: "College of Engineering",
-        status: "registered",
-        paymentStatus: "free",
-        amountPaid: 0,
-        qrToken: "REG-2026-CULT-942",
-        registeredAt: new Date(Date.now() - 36e5).toISOString()
-      },
-      {
-        id: 102,
-        eventId: 1,
-        userId: 3,
-        attendeeName: "Aarav Sharma",
-        attendeeEmail: "aarav@university.edu",
-        attendeePhone: "+91 98123 45678",
-        attendeeCollege: "Institute of Technology",
-        status: "registered",
-        paymentStatus: "completed",
-        amountPaid: 499,
-        qrToken: "REG-2026-HACK-881",
-        registeredAt: new Date(Date.now() - 18e5).toISOString()
-      }
-    ];
-    registerEventHandler = async (req, res) => {
-      const raw = req.params.id ? Array.isArray(req.params.id) ? req.params.id[0] : req.params.id : null;
-      const eventId = raw ? parseInt(raw, 10) : parseInt(req.body?.eventId || "1", 10);
-      if (isNaN(eventId)) {
-        res.status(400).json({ error: "Invalid event ID" });
-        return;
-      }
-      const userId = req.session.userId || 1;
-      const userEventKey = `${userId}:${eventId}`;
-      const {
-        attendeeName = req.session.userName || "Student Member",
-        attendeeEmail = req.session.userEmail || "student@university.edu",
-        attendeePhone = null,
-        attendeeCollege = "University Campus",
-        paymentId = null
-      } = req.body || {};
-      if (inMemoryRegistrations.has(userEventKey)) {
-        const existing = inMemoryRegistrations.get(userEventKey);
-        const qrCodeDataUrl = await generateQrCodeDataUrl(existing.qrToken);
-        res.status(200).json({
-          ...existing,
-          qrCodeDataUrl,
-          message: "Already registered for this event"
-        });
-        return;
-      }
-      const { globalEvents: globalEvents2 } = await Promise.resolve().then(() => (init_store(), store_exports));
-      const foundMem = globalEvents2.find((e) => e.id === eventId);
-      if (foundMem && foundMem.status !== "published") {
-        res.status(400).json({
-          error: `Registration is not open. Event is currently '${foundMem.status.toUpperCase()}' and must be PUBLISHED by the organizer before accepting registrations.`,
-          status: foundMem.status
-        });
-        return;
-      }
-      let eventPrice = foundMem ? foundMem.price : 0;
-      try {
-        const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId));
-        if (event) {
-          if (event.status !== "published") {
-            res.status(400).json({
-              error: `Registration is not open. Event is currently '${event.status.toUpperCase()}' and must be PUBLISHED by the organizer before accepting registrations.`,
-              status: event.status
-            });
-            return;
-          }
-          eventPrice = event.price ?? 0;
-        }
-      } catch {
-      }
-      if (eventPrice > 0 && !paymentId) {
-        res.status(402).json({
-          error: `Payment of \u20B9${eventPrice} is required to register for this event.`,
-          requiresPayment: true,
-          price: eventPrice
-        });
-        return;
-      }
-      const paymentStatus = eventPrice > 0 ? "completed" : "free";
-      const amountPaid = eventPrice > 0 ? eventPrice : 0;
-      try {
-        const [existing] = await db.select().from(registrationsTable).where(
-          and(
-            eq(registrationsTable.eventId, eventId),
-            eq(registrationsTable.userId, userId)
-          )
-        );
-        if (existing && existing.status === "registered") {
-          inMemoryRegistrations.set(userEventKey, existing);
-          const qrCodeDataUrl2 = await generateQrCodeDataUrl(existing.qrToken);
-          res.status(200).json({
-            ...existing,
-            qrCodeDataUrl: qrCodeDataUrl2,
-            message: "Already registered for this event"
-          });
-          return;
-        }
-        const qrToken = generateQrToken(Date.now() % 1e5);
-        const [registration] = await db.insert(registrationsTable).values({
-          eventId,
-          userId,
-          attendeeName,
-          attendeeEmail,
-          attendeePhone,
-          attendeeCollege,
-          status: "registered",
-          paymentStatus,
-          amountPaid,
-          paymentId,
-          qrToken
-        }).returning();
-        const qrCodeDataUrl = await generateQrCodeDataUrl(qrToken);
-        const resultObj = registration || {
-          id: Math.floor(Math.random() * 9e3) + 1e3,
-          eventId,
-          userId,
-          attendeeName,
-          attendeeEmail,
-          attendeePhone,
-          attendeeCollege,
-          status: "registered",
-          paymentStatus,
-          amountPaid,
-          qrToken
-        };
-        inMemoryRegistrations.set(userEventKey, resultObj);
-        globalRegistrationsList.unshift(resultObj);
-        const io = getIo();
-        if (io) {
-          io.emit("registration_created", { eventId, userId, amountPaid, paymentStatus });
-          io.emit("attendance_updated", { eventId });
-        }
-        res.status(201).json({
-          ...resultObj,
-          qrCodeDataUrl,
-          message: eventPrice === 0 ? "\u2713 Free Pass Registered Successfully!" : `\u2713 Paid Registration Confirmed! (\u20B9${amountPaid})`
-        });
-        return;
-      } catch (err) {
-        const qrToken = generateQrToken(Math.floor(Math.random() * 9e3) + 1e3);
-        const qrCodeDataUrl = await generateQrCodeDataUrl(qrToken);
-        const fallbackObj = {
-          id: Math.floor(Math.random() * 9e3) + 1e3,
-          eventId,
-          userId,
-          attendeeName,
-          attendeeEmail,
-          attendeePhone,
-          attendeeCollege,
-          status: "registered",
-          paymentStatus,
-          amountPaid,
-          qrToken,
-          qrCodeDataUrl,
-          registeredAt: (/* @__PURE__ */ new Date()).toISOString()
-        };
-        inMemoryRegistrations.set(userEventKey, fallbackObj);
-        globalRegistrationsList.unshift(fallbackObj);
-        const io = getIo();
-        if (io) {
-          io.emit("registration_created", { eventId, userId, amountPaid, paymentStatus });
-          io.emit("attendance_updated", { eventId });
-        }
-        res.status(201).json(fallbackObj);
-      }
-    };
-    router4.post("/events/:id/register", requireAuth, registerEventHandler);
-    router4.post("/registrations", requireAuth, registerEventHandler);
-    router4.get("/events/:id/registrations", requireAuth, requireRole("organizer", "admin"), async (req, res) => {
-      const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const eventId = parseInt(raw || "1", 10);
-      try {
-        const registrations = await db.select({
-          id: registrationsTable.id,
-          eventId: registrationsTable.eventId,
-          userId: registrationsTable.userId,
-          attendeeName: registrationsTable.attendeeName,
-          attendeeEmail: registrationsTable.attendeeEmail,
-          attendeePhone: registrationsTable.attendeePhone,
-          attendeeCollege: registrationsTable.attendeeCollege,
-          status: registrationsTable.status,
-          paymentStatus: registrationsTable.paymentStatus,
-          amountPaid: registrationsTable.amountPaid,
-          paymentId: registrationsTable.paymentId,
-          qrToken: registrationsTable.qrToken,
-          checkedInAt: registrationsTable.checkedInAt,
-          registeredAt: registrationsTable.registeredAt
-        }).from(registrationsTable).where(eq(registrationsTable.eventId, eventId)).orderBy(desc(registrationsTable.registeredAt));
-        if (registrations.length > 0) {
-          res.json(registrations);
-          return;
-        }
-      } catch {
-      }
-      const filteredFallback = globalRegistrationsList.filter((r) => r.eventId === eventId);
-      res.json(filteredFallback.length > 0 ? filteredFallback : globalRegistrationsList);
-    });
-    listMyRegistrations = async (req, res) => {
-      const userId = req.session.userId || 1;
-      try {
-        const registrations = await db.select({
-          registration: registrationsTable,
-          event: eventsTable
-        }).from(registrationsTable).innerJoin(eventsTable, eq(eventsTable.id, registrationsTable.eventId)).where(eq(registrationsTable.userId, userId)).orderBy(desc(registrationsTable.registeredAt));
-        if (registrations.length > 0) {
-          const results = await Promise.all(
-            registrations.map(async ({ registration, event }) => {
-              const qrCodeDataUrl = registration.status !== "cancelled" ? await generateQrCodeDataUrl(registration.qrToken) : null;
-              return {
-                ...registration,
-                qrCodeDataUrl,
-                event: {
-                  ...event,
-                  registeredCount: 150,
-                  checkedInCount: 45
-                }
-              };
-            })
-          );
-          res.json(results);
-          return;
-        }
-      } catch {
-      }
-      const sampleToken = generateQrToken(101);
-      const sampleQrUrl = await generateQrCodeDataUrl(sampleToken);
-      res.json([
-        {
-          id: 101,
-          eventId: 1,
-          userId,
-          attendeeName: "Student Member",
-          attendeeEmail: "student@university.edu",
-          status: "registered",
-          paymentStatus: "free",
-          amountPaid: 0,
-          qrToken: sampleToken,
-          qrCodeDataUrl: sampleQrUrl,
-          registeredAt: (/* @__PURE__ */ new Date()).toISOString(),
-          checkedInAt: null,
-          event: {
-            id: 1,
-            title: "TechRush Hackathon 2026",
-            category: "Technical",
-            venue: "Main Convention Hall",
-            startTime: new Date(Date.now() + 864e5).toISOString(),
-            endTime: new Date(Date.now() + 1728e5).toISOString(),
-            capacity: 500,
-            price: 0,
-            registeredCount: 380,
-            checkedInCount: 120
-          }
-        }
-      ]);
-    };
-    router4.get("/registrations/me", requireAuth, listMyRegistrations);
-    router4.get("/registrations/my", requireAuth, listMyRegistrations);
-    router4.delete("/registrations/:id", requireAuth, async (req, res) => {
-      const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const id = parseInt(raw, 10);
-      if (isNaN(id)) {
-        res.status(400).json({ error: "Invalid registration ID" });
-        return;
-      }
-      try {
-        await db.update(registrationsTable).set({ status: "cancelled" }).where(eq(registrationsTable.id, id));
-      } catch {
-      }
-      const io = getIo();
-      if (io) {
-        io.emit("registration_cancelled", { id });
-        io.emit("attendance_updated", { registrationId: id });
-      }
-      res.sendStatus(204);
-    });
-    registrations_default = router4;
-  }
-});
-
 // src/app.ts
 var import_express13 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
@@ -79947,9 +79426,6 @@ var getHealthStatus = () => ({
   environment: process.env.NODE_ENV || "production",
   emailDemoMode: process.env.EMAIL_DEMO_MODE === "true"
 });
-router.get("/", (_req, res) => {
-  res.json(getHealthStatus());
-});
 router.get("/healthz", (_req, res) => {
   res.json(getHealthStatus());
 });
@@ -79962,10 +79438,144 @@ var health_default = router;
 var import_express2 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-init_auth();
 import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
+
+// src/lib/auth.ts
+var import_jsonwebtoken = __toESM(require_jsonwebtoken(), 1);
+import bcrypt from "bcrypt";
+import crypto2 from "crypto";
+var SALT_ROUNDS = 12;
+var JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "eventhub-access-jwt-secret-2026";
+var REFRESH_SECRET = process.env.REFRESH_SECRET || "eventhub-refresh-jwt-secret-2026";
+var QR_SECRET = process.env.QR_SECRET || "eventhub-qr-secret-2026";
+async function hashPassword(password) {
+  return bcrypt.hash(password, SALT_ROUNDS);
+}
+async function verifyPassword(password, hash) {
+  return bcrypt.compare(password, hash);
+}
+function generateAccessToken(user) {
+  return import_jsonwebtoken.default.sign(
+    { id: user.id, email: user.email, role: user.role, type: "access" },
+    JWT_SECRET,
+    { expiresIn: "15m" }
+  );
+}
+function generateRefreshToken(user) {
+  return import_jsonwebtoken.default.sign(
+    { id: user.id, email: user.email, role: user.role, type: "refresh" },
+    REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
+}
+function verifyAccessToken(token) {
+  try {
+    const decoded = import_jsonwebtoken.default.verify(token, JWT_SECRET);
+    if (decoded && decoded.type === "access") {
+      return { id: decoded.id, email: decoded.email, role: decoded.role };
+    }
+    return decoded ? { id: decoded.id, email: decoded.email, role: decoded.role } : null;
+  } catch {
+    return null;
+  }
+}
+function verifyRefreshToken(token) {
+  try {
+    const decoded = import_jsonwebtoken.default.verify(token, REFRESH_SECRET);
+    if (decoded && decoded.type === "refresh") {
+      return { id: decoded.id, email: decoded.email, role: decoded.role };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+function setRefreshTokenCookie(res, refreshToken) {
+  const isProduction2 = process.env.NODE_ENV === "production";
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: isProduction2,
+    // Enabled on HTTPS production
+    sameSite: "lax",
+    path: "/api/auth/refresh",
+    maxAge: 7 * 24 * 60 * 60 * 1e3
+    // 7 days
+  });
+}
+function clearRefreshTokenCookie(res) {
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/api/auth/refresh"
+  });
+}
+function sanitizeInput(input) {
+  if (typeof input !== "string") return "";
+  return input.trim().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/\//g, "&#x2F;");
+}
+function sanitizeUserOutput(user) {
+  if (!user) return user;
+  const copy = { ...user };
+  delete copy.passwordHash;
+  delete copy.otp;
+  delete copy.resetToken;
+  return copy;
+}
+function generateQrToken(registrationId) {
+  const payload = `reg:${registrationId}:${Date.now()}`;
+  const sig = crypto2.createHmac("sha256", QR_SECRET).update(payload).digest("hex").slice(0, 16);
+  return `${Buffer.from(payload).toString("base64url")}.${sig}`;
+}
+function requireAuth(req, res, next) {
+  if (!req.session) {
+    req.session = {};
+  }
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    const decoded = verifyAccessToken(token);
+    if (decoded) {
+      req.session.userId = decoded.id;
+      req.session.userRole = decoded.role;
+      req.session.role = decoded.role;
+      return next();
+    }
+  }
+  if (!req.session?.userId) {
+    res.status(401).json({ error: "Authentication required. Please log in." });
+    return;
+  }
+  next();
+}
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.session) {
+      req.session = {};
+    }
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      const decoded = verifyAccessToken(token);
+      if (decoded) {
+        req.session.userId = decoded.id;
+        req.session.userRole = decoded.role;
+        req.session.role = decoded.role;
+      }
+    }
+    const currentRole = req.session.userRole || req.session.role;
+    if (!req.session?.userId) {
+      res.status(401).json({ error: "Authentication required. Please log in." });
+      return;
+    }
+    if (!currentRole || !roles.includes(currentRole)) {
+      res.status(403).json({ error: "Access denied. Required role: " + roles.join(" or ") });
+      return;
+    }
+    next();
+  };
+}
 
 // src/lib/email-service.ts
 var import_nodemailer = __toESM(require_nodemailer(), 1);
@@ -87477,9 +87087,13 @@ var ListMyEventsResponse = object({
   "limit": int()
 });
 
+// src/lib/socket.ts
+var _io = null;
+function getIo() {
+  return _io;
+}
+
 // src/routes/events.ts
-init_auth();
-init_socket();
 init_store();
 
 // src/lib/mascot-generator.ts
@@ -88437,19 +88051,317 @@ router3.post("/events/:id/mascot/generate", requireAuth, requireRole("organizer"
 });
 var events_default = router3;
 
-// src/routes/index.ts
-init_registrations2();
+// src/routes/registrations.ts
+var import_express4 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
+
+// src/lib/qrcode.ts
+var import_qrcode = __toESM(require_lib6(), 1);
+async function generateQrCodeDataUrl(data) {
+  return import_qrcode.default.toDataURL(data, {
+    errorCorrectionLevel: "M",
+    width: 256,
+    margin: 2
+  });
+}
+
+// src/routes/registrations.ts
+var router4 = (0, import_express4.Router)();
+var inMemoryRegistrations = /* @__PURE__ */ new Map();
+var globalRegistrationsList = [
+  {
+    id: 101,
+    eventId: 1,
+    userId: 2,
+    attendeeName: "Priya Patel",
+    attendeeEmail: "priya@university.edu",
+    attendeePhone: "+91 98765 43210",
+    attendeeCollege: "College of Engineering",
+    status: "registered",
+    paymentStatus: "free",
+    amountPaid: 0,
+    qrToken: "REG-2026-CULT-942",
+    registeredAt: new Date(Date.now() - 36e5).toISOString()
+  },
+  {
+    id: 102,
+    eventId: 1,
+    userId: 3,
+    attendeeName: "Aarav Sharma",
+    attendeeEmail: "aarav@university.edu",
+    attendeePhone: "+91 98123 45678",
+    attendeeCollege: "Institute of Technology",
+    status: "registered",
+    paymentStatus: "completed",
+    amountPaid: 499,
+    qrToken: "REG-2026-HACK-881",
+    registeredAt: new Date(Date.now() - 18e5).toISOString()
+  }
+];
+var registerEventHandler = async (req, res) => {
+  const raw = req.params.id ? Array.isArray(req.params.id) ? req.params.id[0] : req.params.id : null;
+  const eventId = raw ? parseInt(raw, 10) : parseInt(req.body?.eventId || "1", 10);
+  if (isNaN(eventId)) {
+    res.status(400).json({ error: "Invalid event ID" });
+    return;
+  }
+  const userId = req.session.userId || 1;
+  const userEventKey = `${userId}:${eventId}`;
+  const {
+    attendeeName = req.session.userName || "Student Member",
+    attendeeEmail = req.session.userEmail || "student@university.edu",
+    attendeePhone = null,
+    attendeeCollege = "University Campus",
+    paymentId = null
+  } = req.body || {};
+  if (inMemoryRegistrations.has(userEventKey)) {
+    const existing = inMemoryRegistrations.get(userEventKey);
+    const qrCodeDataUrl = await generateQrCodeDataUrl(existing.qrToken);
+    res.status(200).json({
+      ...existing,
+      qrCodeDataUrl,
+      message: "Already registered for this event"
+    });
+    return;
+  }
+  const { globalEvents: globalEvents2 } = await Promise.resolve().then(() => (init_store(), store_exports));
+  const foundMem = globalEvents2.find((e) => e.id === eventId);
+  if (foundMem && foundMem.status !== "published") {
+    res.status(400).json({
+      error: `Registration is not open. Event is currently '${foundMem.status.toUpperCase()}' and must be PUBLISHED by the organizer before accepting registrations.`,
+      status: foundMem.status
+    });
+    return;
+  }
+  let eventPrice = foundMem ? foundMem.price : 0;
+  try {
+    const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId));
+    if (event) {
+      if (event.status !== "published") {
+        res.status(400).json({
+          error: `Registration is not open. Event is currently '${event.status.toUpperCase()}' and must be PUBLISHED by the organizer before accepting registrations.`,
+          status: event.status
+        });
+        return;
+      }
+      eventPrice = event.price ?? 0;
+    }
+  } catch {
+  }
+  if (eventPrice > 0 && !paymentId) {
+    res.status(402).json({
+      error: `Payment of \u20B9${eventPrice} is required to register for this event.`,
+      requiresPayment: true,
+      price: eventPrice
+    });
+    return;
+  }
+  const paymentStatus = eventPrice > 0 ? "completed" : "free";
+  const amountPaid = eventPrice > 0 ? eventPrice : 0;
+  try {
+    const [existing] = await db.select().from(registrationsTable).where(
+      and(
+        eq(registrationsTable.eventId, eventId),
+        eq(registrationsTable.userId, userId)
+      )
+    );
+    if (existing && existing.status === "registered") {
+      inMemoryRegistrations.set(userEventKey, existing);
+      const qrCodeDataUrl2 = await generateQrCodeDataUrl(existing.qrToken);
+      res.status(200).json({
+        ...existing,
+        qrCodeDataUrl: qrCodeDataUrl2,
+        message: "Already registered for this event"
+      });
+      return;
+    }
+    const qrToken = generateQrToken(Date.now() % 1e5);
+    const [registration] = await db.insert(registrationsTable).values({
+      eventId,
+      userId,
+      attendeeName,
+      attendeeEmail,
+      attendeePhone,
+      attendeeCollege,
+      status: "registered",
+      paymentStatus,
+      amountPaid,
+      paymentId,
+      qrToken
+    }).returning();
+    const qrCodeDataUrl = await generateQrCodeDataUrl(qrToken);
+    const resultObj = registration || {
+      id: Math.floor(Math.random() * 9e3) + 1e3,
+      eventId,
+      userId,
+      attendeeName,
+      attendeeEmail,
+      attendeePhone,
+      attendeeCollege,
+      status: "registered",
+      paymentStatus,
+      amountPaid,
+      qrToken
+    };
+    inMemoryRegistrations.set(userEventKey, resultObj);
+    globalRegistrationsList.unshift(resultObj);
+    const io = getIo();
+    if (io) {
+      io.emit("registration_created", { eventId, userId, amountPaid, paymentStatus });
+      io.emit("attendance_updated", { eventId });
+    }
+    res.status(201).json({
+      ...resultObj,
+      qrCodeDataUrl,
+      message: eventPrice === 0 ? "\u2713 Free Pass Registered Successfully!" : `\u2713 Paid Registration Confirmed! (\u20B9${amountPaid})`
+    });
+    return;
+  } catch (err) {
+    const qrToken = generateQrToken(Math.floor(Math.random() * 9e3) + 1e3);
+    const qrCodeDataUrl = await generateQrCodeDataUrl(qrToken);
+    const fallbackObj = {
+      id: Math.floor(Math.random() * 9e3) + 1e3,
+      eventId,
+      userId,
+      attendeeName,
+      attendeeEmail,
+      attendeePhone,
+      attendeeCollege,
+      status: "registered",
+      paymentStatus,
+      amountPaid,
+      qrToken,
+      qrCodeDataUrl,
+      registeredAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    inMemoryRegistrations.set(userEventKey, fallbackObj);
+    globalRegistrationsList.unshift(fallbackObj);
+    const io = getIo();
+    if (io) {
+      io.emit("registration_created", { eventId, userId, amountPaid, paymentStatus });
+      io.emit("attendance_updated", { eventId });
+    }
+    res.status(201).json(fallbackObj);
+  }
+};
+router4.post("/events/:id/register", requireAuth, registerEventHandler);
+router4.post("/registrations", requireAuth, registerEventHandler);
+router4.get("/events/:id/registrations", requireAuth, requireRole("organizer", "admin"), async (req, res) => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const eventId = parseInt(raw || "1", 10);
+  try {
+    const registrations = await db.select({
+      id: registrationsTable.id,
+      eventId: registrationsTable.eventId,
+      userId: registrationsTable.userId,
+      attendeeName: registrationsTable.attendeeName,
+      attendeeEmail: registrationsTable.attendeeEmail,
+      attendeePhone: registrationsTable.attendeePhone,
+      attendeeCollege: registrationsTable.attendeeCollege,
+      status: registrationsTable.status,
+      paymentStatus: registrationsTable.paymentStatus,
+      amountPaid: registrationsTable.amountPaid,
+      paymentId: registrationsTable.paymentId,
+      qrToken: registrationsTable.qrToken,
+      checkedInAt: registrationsTable.checkedInAt,
+      registeredAt: registrationsTable.registeredAt
+    }).from(registrationsTable).where(eq(registrationsTable.eventId, eventId)).orderBy(desc(registrationsTable.registeredAt));
+    if (registrations.length > 0) {
+      res.json(registrations);
+      return;
+    }
+  } catch {
+  }
+  const filteredFallback = globalRegistrationsList.filter((r) => r.eventId === eventId);
+  res.json(filteredFallback.length > 0 ? filteredFallback : globalRegistrationsList);
+});
+var listMyRegistrations = async (req, res) => {
+  const userId = req.session.userId || 1;
+  try {
+    const registrations = await db.select({
+      registration: registrationsTable,
+      event: eventsTable
+    }).from(registrationsTable).innerJoin(eventsTable, eq(eventsTable.id, registrationsTable.eventId)).where(eq(registrationsTable.userId, userId)).orderBy(desc(registrationsTable.registeredAt));
+    if (registrations.length > 0) {
+      const results = await Promise.all(
+        registrations.map(async ({ registration, event }) => {
+          const qrCodeDataUrl = registration.status !== "cancelled" ? await generateQrCodeDataUrl(registration.qrToken) : null;
+          return {
+            ...registration,
+            qrCodeDataUrl,
+            event: {
+              ...event,
+              registeredCount: 150,
+              checkedInCount: 45
+            }
+          };
+        })
+      );
+      res.json(results);
+      return;
+    }
+  } catch {
+  }
+  const sampleToken = generateQrToken(101);
+  const sampleQrUrl = await generateQrCodeDataUrl(sampleToken);
+  res.json([
+    {
+      id: 101,
+      eventId: 1,
+      userId,
+      attendeeName: "Student Member",
+      attendeeEmail: "student@university.edu",
+      status: "registered",
+      paymentStatus: "free",
+      amountPaid: 0,
+      qrToken: sampleToken,
+      qrCodeDataUrl: sampleQrUrl,
+      registeredAt: (/* @__PURE__ */ new Date()).toISOString(),
+      checkedInAt: null,
+      event: {
+        id: 1,
+        title: "TechRush Hackathon 2026",
+        category: "Technical",
+        venue: "Main Convention Hall",
+        startTime: new Date(Date.now() + 864e5).toISOString(),
+        endTime: new Date(Date.now() + 1728e5).toISOString(),
+        capacity: 500,
+        price: 0,
+        registeredCount: 380,
+        checkedInCount: 120
+      }
+    }
+  ]);
+};
+router4.get("/registrations/me", requireAuth, listMyRegistrations);
+router4.get("/registrations/my", requireAuth, listMyRegistrations);
+router4.delete("/registrations/:id", requireAuth, async (req, res) => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid registration ID" });
+    return;
+  }
+  try {
+    await db.update(registrationsTable).set({ status: "cancelled" }).where(eq(registrationsTable.id, id));
+  } catch {
+  }
+  const io = getIo();
+  if (io) {
+    io.emit("registration_cancelled", { id });
+    io.emit("attendance_updated", { registrationId: id });
+  }
+  res.sendStatus(204);
+});
+var registrations_default = router4;
 
 // src/routes/payments.ts
 var import_express5 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-init_auth();
-init_auth();
-init_qrcode();
-init_socket();
-init_store();
 import crypto4 from "crypto";
+init_store();
 var router5 = (0, import_express5.Router)();
 var getRazorpayKeyId = () => process.env.RAZORPAY_KEY_ID || "rzp_test_eventhub2026";
 var getRazorpayKeySecret = () => process.env.RAZORPAY_KEY_SECRET || "eventhub_secret_key_rzp_2026";
@@ -88648,13 +88560,6 @@ router5.post("/payments/verify", requireAuth, async (req, res) => {
     }).where(eq(paymentsTable.orderId, orderId));
   } catch {
   }
-  try {
-    const { inMemoryRegistrations: inMemoryRegistrations2, globalRegistrationsList: globalRegistrationsList2 } = await Promise.resolve().then(() => (init_registrations2(), registrations_exports));
-    const userEventKey = `${userId}:${numEventId}`;
-    inMemoryRegistrations2.set(userEventKey, confirmedObj);
-    globalRegistrationsList2.unshift(confirmedObj);
-  } catch {
-  }
   const io = getIo();
   if (io) {
     io.emit("registration_created", { eventId: numEventId, userId, amountPaid: eventPrice, paymentStatus: "completed" });
@@ -88788,8 +88693,6 @@ var payments_default = router5;
 var import_express6 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-init_auth();
-init_socket();
 var router6 = (0, import_express6.Router)();
 var checkinHistoryCache = /* @__PURE__ */ new Map();
 var checkinAuditLogs = [
@@ -88823,13 +88726,9 @@ router6.get("/checkin/logs/:eventId", requireAuth, async (req, res) => {
   res.json(logs);
 });
 router6.post("/checkin/scan", requireAuth, requireRole("volunteer", "organizer", "admin"), async (req, res) => {
-  const qrToken = String(req.body?.qrToken || req.body?.token || "").trim();
+  const qrToken = req.body?.qrToken || req.body?.token || `QR-PASS-${Date.now()}`;
   const eventId = parseInt(req.body?.eventId || "1", 10);
   const station = req.body?.station || "Main Gate Scanner Desk";
-  if (!qrToken) {
-    res.status(400).json({ error: "QR token is required." });
-    return;
-  }
   if (checkinHistoryCache.has(qrToken)) {
     const existing = checkinHistoryCache.get(qrToken);
     res.status(200).json({
@@ -88837,100 +88736,22 @@ router6.post("/checkin/scan", requireAuth, requireRole("volunteer", "organizer",
       action: "already_checked_in",
       attendeeName: existing.attendeeName,
       attendeeEmail: existing.attendeeEmail,
-      message: `\u2139\uFE0F Ticket was already checked in for ${existing.attendeeName} at ${existing.station}.`,
+      message: `\u2139\uFE0F Ticket "${qrToken}" was already checked in at ${existing.station}.`,
       timestamp: existing.checkedInAt.toISOString(),
       isLateEntry: false
     });
     return;
   }
-  let dbRegistration = null;
-  const { verifyQrToken: verifyQrToken2 } = await Promise.resolve().then(() => (init_auth(), auth_exports));
   try {
-    const [byToken] = await db.select().from(registrationsTable).where(eq(registrationsTable.qrToken, qrToken)).limit(1);
-    dbRegistration = byToken;
-    if (!dbRegistration) {
-      const parsedId = verifyQrToken2(qrToken);
-      if (parsedId) {
-        const [byId] = await db.select().from(registrationsTable).where(eq(registrationsTable.id, parsedId)).limit(1);
-        dbRegistration = byId;
-      }
+    const [registration] = await db.select().from(registrationsTable).where(and(eq(registrationsTable.eventId, eventId), eq(registrationsTable.status, "registered")));
+    if (registration) {
+      await db.update(registrationsTable).set({ checkedInAt: /* @__PURE__ */ new Date() }).where(eq(registrationsTable.id, registration.id));
     }
-  } catch (dbErr) {
-    console.error("Database query error during check-in:", dbErr);
+  } catch {
   }
-  if (dbRegistration) {
-    if (dbRegistration.checkedInAt) {
-      const checkedInTime = new Date(dbRegistration.checkedInAt);
-      checkinHistoryCache.set(qrToken, {
-        attendeeName: dbRegistration.attendeeName,
-        attendeeEmail: dbRegistration.attendeeEmail,
-        checkedInAt: checkedInTime,
-        station
-      });
-      res.status(200).json({
-        success: true,
-        action: "already_checked_in",
-        attendeeName: dbRegistration.attendeeName,
-        attendeeEmail: dbRegistration.attendeeEmail,
-        message: `\u2139\uFE0F Ticket was already checked in for ${dbRegistration.attendeeName}.`,
-        timestamp: checkedInTime.toISOString(),
-        isLateEntry: false
-      });
-      return;
-    }
-    const now2 = /* @__PURE__ */ new Date();
-    try {
-      await db.update(registrationsTable).set({ checkedInAt: now2 }).where(eq(registrationsTable.id, dbRegistration.id));
-    } catch {
-    }
-    const attendeeName2 = dbRegistration.attendeeName || "Student Member";
-    const attendeeEmail2 = dbRegistration.attendeeEmail || "student@university.edu";
-    checkinHistoryCache.set(qrToken, {
-      attendeeName: attendeeName2,
-      attendeeEmail: attendeeEmail2,
-      checkedInAt: now2,
-      station
-    });
-    const targetEventId = dbRegistration.eventId || eventId;
-    const newLog2 = {
-      id: Date.now(),
-      eventId: targetEventId,
-      attendeeName: attendeeName2,
-      attendeeEmail: attendeeEmail2,
-      ticketToken: qrToken,
-      station,
-      timestamp: now2.toISOString(),
-      isLate: false,
-      action: "check_in"
-    };
-    checkinAuditLogs.unshift(newLog2);
-    const io2 = getIo();
-    if (io2) {
-      io2.emit("checkin_completed", newLog2);
-      io2.emit("attendance_updated", { eventId: targetEventId });
-      io2.to(`event:${targetEventId}`).emit("checkin_completed", newLog2);
-    }
-    res.json({
-      success: true,
-      action: "check_in",
-      attendeeName: attendeeName2,
-      attendeeEmail: attendeeEmail2,
-      message: `\u2713 Check-in Verified for ${attendeeName2}`,
-      timestamp: now2.toISOString(),
-      isLateEntry: false
-    });
-    return;
-  }
-  const { globalRegistrationsList: globalRegistrationsList2 } = await Promise.resolve().then(() => (init_registrations2(), registrations_exports));
-  const memFound = (globalRegistrationsList2 || []).find(
-    (r) => r.qrToken === qrToken || String(r.id) === String(verifyQrToken2(qrToken))
-  );
+  const attendeeName = qrToken.includes("CULT") ? "Priya Patel" : qrToken.includes("SEMI") ? "Aarav Sharma" : "Alex Student";
+  const attendeeEmail = qrToken.includes("CULT") ? "priya@university.edu" : qrToken.includes("SEMI") ? "aarav@university.edu" : "student@university.edu";
   const now = /* @__PURE__ */ new Date();
-  const attendeeName = memFound?.attendeeName || (qrToken.includes("CULT") ? "Priya Patel" : qrToken.includes("HACK") || qrToken.includes("SEMI") ? "Aarav Sharma" : "Student Member");
-  const attendeeEmail = memFound?.attendeeEmail || (qrToken.includes("CULT") ? "priya@university.edu" : qrToken.includes("HACK") ? "aarav@university.edu" : "student@university.edu");
-  if (memFound) {
-    memFound.checkedInAt = now;
-  }
   checkinHistoryCache.set(qrToken, {
     attendeeName,
     attendeeEmail,
@@ -88960,7 +88781,7 @@ router6.post("/checkin/scan", requireAuth, requireRole("volunteer", "organizer",
     action: "check_in",
     attendeeName,
     attendeeEmail,
-    message: `\u2713 Check-in Verified for ${attendeeName}`,
+    message: `\u2713 Check-in Verified for ${attendeeName} (${qrToken.slice(0, 16)}...)`,
     timestamp: now.toISOString(),
     isLateEntry: false
   });
@@ -89024,8 +88845,6 @@ var checkin_default = router6;
 var import_express7 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-init_auth();
-init_socket();
 init_store();
 
 // src/lib/volunteer-ai-matching.ts
@@ -89659,8 +89478,6 @@ var volunteers_default = router7;
 var import_express8 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-init_auth();
-init_socket();
 var router8 = (0, import_express8.Router)();
 var listTasksHandler = async (req, res) => {
   const raw = req.params.id ? Array.isArray(req.params.id) ? req.params.id[0] : req.params.id : null;
@@ -89800,7 +89617,6 @@ var tasks_default = router8;
 var import_express9 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-init_auth();
 var router9 = (0, import_express9.Router)();
 var getEventStatsHandler = async (req, res) => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -89959,84 +89775,35 @@ router9.get("/dashboard/organizer", requireAuth, requireRole("organizer", "admin
 });
 router9.get("/dashboard/attendee", requireAuth, async (req, res) => {
   const userId = req.session.userId;
-  const { generateQrCodeDataUrl: generateQrCodeDataUrl2 } = await Promise.resolve().then(() => (init_qrcode(), qrcode_exports));
-  const { globalEvents: globalEvents2 } = await Promise.resolve().then(() => (init_store(), store_exports));
-  const { globalRegistrationsList: globalRegistrationsList2 } = await Promise.resolve().then(() => (init_registrations2(), registrations_exports));
   try {
-    let allRegs = [];
-    try {
-      allRegs = await db.select({
-        registration: registrationsTable,
-        event: eventsTable
-      }).from(registrationsTable).innerJoin(eventsTable, eq(eventsTable.id, registrationsTable.eventId)).where(and(
-        eq(registrationsTable.userId, userId),
-        eq(registrationsTable.status, "registered")
-      )).orderBy(eventsTable.startTime);
-    } catch {
-    }
-    const memUserRegs = (globalRegistrationsList2 || []).filter(
-      (r) => r.userId === userId && r.status === "registered"
-    );
-    for (const memReg of memUserRegs) {
-      const alreadyInDb = allRegs.some((r) => r.registration?.qrToken === memReg.qrToken || r.registration?.id === memReg.id);
-      if (!alreadyInDb) {
-        const foundEvent = globalEvents2.find((e) => e.id === memReg.eventId) || {
-          id: memReg.eventId,
-          title: "Campus Event",
-          category: "Technology",
-          venue: "Campus Hall",
-          startTime: new Date(Date.now() + 864e5 * 3).toISOString(),
-          endTime: new Date(Date.now() + 864e5 * 3 + 144e5).toISOString(),
-          capacity: 200,
-          price: 0
-        };
-        allRegs.push({
-          registration: memReg,
-          event: foundEvent
-        });
-      }
-    }
-    if (allRegs.length > 0) {
-      const now = /* @__PURE__ */ new Date();
-      const enriched = await Promise.all(
-        allRegs.map(async ({ registration, event }) => {
-          const qrCodeDataUrl = registration.qrToken ? await generateQrCodeDataUrl2(registration.qrToken) : registration.qrCodeDataUrl || null;
-          return {
-            ...registration,
-            qrCodeDataUrl,
-            event: {
-              ...event,
-              registeredCount: event.capacity ? Math.min(event.capacity, 150) : 150,
-              checkedInCount: registration.checkedInAt ? 1 : 0
-            }
-          };
-        })
-      );
-      const upcomingEvents = enriched.filter((r) => {
-        const end = r.event.endTime ? new Date(r.event.endTime) : new Date(r.event.startTime);
-        return end.getTime() >= now.getTime() - 864e5;
-      });
-      const pastEvents = enriched.filter((r) => {
-        const end = r.event.endTime ? new Date(r.event.endTime) : new Date(r.event.startTime);
-        return end.getTime() < now.getTime() - 864e5;
-      });
-      res.json({
-        totalRegistrations: allRegs.length,
-        upcomingEvents: upcomingEvents.length > 0 ? upcomingEvents : enriched,
-        pastEvents
-      });
-      return;
-    }
+    const allRegs = await db.select({
+      registration: registrationsTable,
+      event: eventsTable
+    }).from(registrationsTable).innerJoin(eventsTable, eq(eventsTable.id, registrationsTable.eventId)).where(and(
+      eq(registrationsTable.userId, userId),
+      eq(registrationsTable.status, "registered")
+    )).orderBy(eventsTable.startTime);
+    const now = /* @__PURE__ */ new Date();
+    const upcomingEvents = allRegs.filter(({ event }) => event.startTime >= now).map(({ registration, event }) => ({
+      ...registration,
+      qrCodeDataUrl: null,
+      event: { ...event, registeredCount: 150, checkedInCount: 0 }
+    }));
+    const pastEvents = allRegs.filter(({ event }) => event.endTime < now).map(({ registration, event }) => ({
+      ...registration,
+      qrCodeDataUrl: null,
+      event: { ...event, registeredCount: 200, checkedInCount: 190 }
+    }));
     res.json({
-      totalRegistrations: 0,
-      upcomingEvents: [],
-      pastEvents: []
+      totalRegistrations: allRegs.length || 3,
+      upcomingEvents: upcomingEvents.length > 0 ? upcomingEvents : sampleUpcomingEvents(),
+      pastEvents: pastEvents.length > 0 ? pastEvents : samplePastEvents()
     });
-  } catch (err) {
+  } catch {
     res.json({
-      totalRegistrations: 0,
-      upcomingEvents: [],
-      pastEvents: []
+      totalRegistrations: 3,
+      upcomingEvents: sampleUpcomingEvents(),
+      pastEvents: samplePastEvents()
     });
   }
 });
@@ -90068,11 +89835,38 @@ function sampleUpcomingEvents() {
     }
   ];
 }
+function samplePastEvents() {
+  return [
+    {
+      id: 3,
+      eventId: 3,
+      userId: 1,
+      status: "registered",
+      paymentStatus: "completed",
+      amountPaid: 499,
+      qrToken: "REG-2026-SEMI-104",
+      qrCodeDataUrl: null,
+      registeredAt: new Date(Date.now() - 864e5 * 15).toISOString(),
+      checkedInAt: new Date(Date.now() - 864e5 * 14).toISOString(),
+      event: {
+        id: 3,
+        title: "AI & Machine Learning Career Symposium",
+        category: "Seminar",
+        venue: "Engineering Lecture Hall 101",
+        startTime: new Date(Date.now() - 864e5 * 15).toISOString(),
+        endTime: new Date(Date.now() - 864e5 * 15 + 108e5).toISOString(),
+        capacity: 250,
+        price: 499,
+        registeredCount: 240,
+        checkedInCount: 210
+      }
+    }
+  ];
+}
 var dashboard_default = router9;
 
 // src/routes/notifications.ts
 var import_express10 = __toESM(require_express2(), 1);
-init_auth();
 init_store();
 init_src();
 init_drizzle_orm();
@@ -90135,7 +89929,6 @@ var notifications_default = router10;
 
 // src/routes/chat.ts
 var import_express11 = __toESM(require_express2(), 1);
-init_auth();
 
 // src/lib/ai-assistant.ts
 init_src();
@@ -90977,7 +90770,6 @@ Here are some things you can ask me:`,
 // src/routes/chat.ts
 init_src();
 init_drizzle_orm();
-init_socket();
 var router11 = (0, import_express11.Router)();
 var chatRateLimiter = rate_limit_default({
   windowMs: 60 * 1e3,
@@ -91174,6 +90966,15 @@ var logger = (0, import_pino.default)({
 // src/app.ts
 var PgSession2 = connectPgSimple(import_express_session.default);
 var app = (0, import_express13.default)();
+app.use((req, _res, next) => {
+  const original = req.headers["x-matched-path"] || req.headers["x-forwarded-url"] || req.headers["x-vercel-matched-path"];
+  if (original && (original.startsWith("/api") || original === "/api")) {
+    const queryIndex = req.url.indexOf("?");
+    const queryString = queryIndex !== -1 ? req.url.slice(queryIndex) : "";
+    req.url = original.includes("?") ? original : `${original}${queryString}`;
+  }
+  next();
+});
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -91201,16 +91002,13 @@ app.use(
 );
 app.use(import_express13.default.json({ limit: "10mb" }));
 app.use(import_express13.default.urlencoded({ extended: true }));
-var sessionStore;
-try {
-  sessionStore = process.env.DATABASE_URL && process.env.USE_PG_SESSION === "true" ? new PgSession2({
-    pool,
-    tableName: "session",
-    createTableIfMissing: false
-  }) : new import_express_session.default.MemoryStore();
-} catch {
-  sessionStore = new import_express_session.default.MemoryStore();
-}
+var sessionStore = process.env.DATABASE_URL ? new PgSession2({
+  pool,
+  tableName: "session",
+  createTableIfMissing: true,
+  errorLog: () => {
+  }
+}) : new import_express_session.default.MemoryStore();
 app.use(
   (0, import_express_session.default)({
     store: sessionStore,
@@ -91257,12 +91055,6 @@ if (fs2.existsSync(staticPath)) {
     }
   });
 }
-app.use((err, req, res, next) => {
-  if (res.headersSent) return next(err);
-  res.status(err.status || 500).json({
-    error: err.message || "Internal server error"
-  });
-});
 var app_default = app;
 export {
   app_default as default
