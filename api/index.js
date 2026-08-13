@@ -90967,11 +90967,11 @@ var logger = (0, import_pino.default)({
 var PgSession2 = connectPgSimple(import_express_session.default);
 var app = (0, import_express13.default)();
 app.use((req, _res, next) => {
-  const original = req.headers["x-matched-path"] || req.headers["x-forwarded-url"] || req.headers["x-vercel-matched-path"];
-  if (original && (original.startsWith("/api") || original === "/api")) {
+  const forwarded = req.headers["x-forwarded-url"] || req.headers["x-now-route-matches"] || req.headers["x-vercel-matched-path"];
+  if (req.url.includes("index.js") && forwarded && !forwarded.includes("index.js")) {
     const queryIndex = req.url.indexOf("?");
     const queryString = queryIndex !== -1 ? req.url.slice(queryIndex) : "";
-    req.url = original.includes("?") ? original : `${original}${queryString}`;
+    req.url = forwarded.includes("?") ? forwarded : `${forwarded}${queryString}`;
   }
   next();
 });
@@ -91024,6 +91024,15 @@ app.use(
     }
   })
 );
+app.get(["/health", "/api/health", "/healthz", "/api/healthz"], (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "EventHub Production API Engine",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "production"
+  });
+});
 app.use("/api", routes_default);
 app.use("/", routes_default);
 var possiblePaths = [
@@ -91055,6 +91064,21 @@ if (fs2.existsSync(staticPath)) {
     }
   });
 }
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api") || req.url.startsWith("/api")) {
+    res.status(404).json({
+      error: `API route not found: ${req.method} ${req.originalUrl || req.url}`
+    });
+    return;
+  }
+  next();
+});
+app.use((err, _req, res, next) => {
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    error: err.message || "Internal server error"
+  });
+});
 var app_default = app;
 export {
   app_default as default

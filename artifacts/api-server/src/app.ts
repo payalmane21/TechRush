@@ -13,17 +13,17 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
-// Vercel Serverless Path Normalizer (Restores original requested URL when rewrites route to /api/index.js)
+// Vercel Serverless Path Normalizer (Restores original URL if mangled to index.js)
 app.use((req, _res, next) => {
-  const original =
-    (req.headers["x-matched-path"] as string) ||
+  const forwarded =
     (req.headers["x-forwarded-url"] as string) ||
+    (req.headers["x-now-route-matches"] as string) ||
     (req.headers["x-vercel-matched-path"] as string);
 
-  if (original && (original.startsWith("/api") || original === "/api")) {
+  if (req.url.includes("index.js") && forwarded && !forwarded.includes("index.js")) {
     const queryIndex = req.url.indexOf("?");
     const queryString = queryIndex !== -1 ? req.url.slice(queryIndex) : "";
-    req.url = original.includes("?") ? original : `${original}${queryString}`;
+    req.url = forwarded.includes("?") ? forwarded : `${forwarded}${queryString}`;
   }
   next();
 });
@@ -83,6 +83,17 @@ app.use(
   }),
 );
 
+// Direct Health Check Endpoints
+app.get(["/health", "/api/health", "/healthz", "/api/healthz"], (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "EventHub Production API Engine",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "production",
+  });
+});
+
 app.use("/api", router);
 app.use("/", router);
 
@@ -120,5 +131,24 @@ if (fs.existsSync(staticPath)) {
     }
   });
 }
+
+// Ensure API requests never return HTML error pages
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api") || req.url.startsWith("/api")) {
+    res.status(404).json({
+      error: `API route not found: ${req.method} ${req.originalUrl || req.url}`,
+    });
+    return;
+  }
+  next();
+});
+
+// Centralized JSON Error Handler
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    error: err.message || "Internal server error",
+  });
+});
 
 export default app;
