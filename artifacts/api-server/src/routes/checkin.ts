@@ -57,8 +57,8 @@ router.get("/checkin/logs/:eventId", requireAuth, async (req, res): Promise<void
   res.json(logs);
 });
 
-// POST /checkin/scan
-router.post("/checkin/scan", requireAuth, requireRole("volunteer", "organizer", "admin"), async (req, res): Promise<void> => {
+// POST /checkin/scan & /checkin/process & /checkin/validate-qr
+router.post(["/checkin/scan", "/checkin/process", "/checkin/validate-qr"], requireAuth, requireRole("volunteer", "organizer", "admin"), async (req, res): Promise<void> => {
   const qrToken = req.body?.qrToken || req.body?.token || `QR-PASS-${Date.now()}`;
   const eventId = parseInt(req.body?.eventId || "1", 10);
   const station = req.body?.station || "Main Gate Scanner Desk";

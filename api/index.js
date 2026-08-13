@@ -88725,7 +88725,7 @@ router6.get("/checkin/logs/:eventId", requireAuth, async (req, res) => {
   const logs = checkinAuditLogs.filter((l) => l.eventId === eventId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   res.json(logs);
 });
-router6.post("/checkin/scan", requireAuth, requireRole("volunteer", "organizer", "admin"), async (req, res) => {
+router6.post(["/checkin/scan", "/checkin/process", "/checkin/validate-qr"], requireAuth, requireRole("volunteer", "organizer", "admin"), async (req, res) => {
   const qrToken = req.body?.qrToken || req.body?.token || `QR-PASS-${Date.now()}`;
   const eventId = parseInt(req.body?.eventId || "1", 10);
   const station = req.body?.station || "Main Gate Scanner Desk";
