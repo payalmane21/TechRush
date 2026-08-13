@@ -36,11 +36,12 @@ export default function VolunteerScan() {
     }
   }, [events, selectedEvent]);
 
-  const handleScanQr = () => {
-    if (!selectedEvent || !qrToken.trim()) return;
+  const executeScanVerification = (tokenToVerify: string) => {
+    const cleanToken = tokenToVerify.trim();
+    if (!cleanToken) return;
     setResult(null);
     scanMutation.mutate(
-      { data: { qrToken: qrToken.trim(), eventId: parseInt(selectedEvent, 10), station } },
+      { data: { qrToken: cleanToken, eventId: parseInt(selectedEvent || "1", 10), station } },
       {
         onSuccess: (data) => {
           setResult({ success: true, action: data.action, message: data.message ?? "Success", attendeeName: data.attendeeName });
@@ -51,6 +52,10 @@ export default function VolunteerScan() {
         },
       },
     );
+  };
+
+  const handleScanQr = () => {
+    executeScanVerification(qrToken);
   };
 
   const handleManualCheckin = () => {
@@ -81,17 +86,7 @@ export default function VolunteerScan() {
       const decodedText = await html5QrCode.scanFile(file, true);
       if (decodedText) {
         setQrToken(decodedText);
-        scanMutation.mutate(
-          { data: { qrToken: decodedText.trim(), eventId: parseInt(selectedEvent || "1", 10), station } },
-          {
-            onSuccess: (data) => {
-              setResult({ success: true, action: data.action, message: data.message ?? "Success", attendeeName: data.attendeeName });
-            },
-            onError: (err: any) => {
-              setResult({ success: false, message: err?.response?.data?.error ?? "Check-in failed" });
-            },
-          },
-        );
+        executeScanVerification(decodedText);
       }
     } catch (err: any) {
       setResult({ success: false, message: "Could not detect QR code in photo. Please retry or enter token." });
@@ -121,6 +116,7 @@ export default function VolunteerScan() {
         (decodedText: string) => {
           setQrToken(decodedText);
           stopScanner();
+          executeScanVerification(decodedText);
         },
         undefined,
       );

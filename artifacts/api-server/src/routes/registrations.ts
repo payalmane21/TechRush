@@ -9,10 +9,10 @@ import { getIo } from "../lib/socket";
 const router: IRouter = Router();
 
 // In-memory registration tracking cache for instant duplicate detection & fallback store
-const inMemoryRegistrations = new Map<string, any>();
+export const inMemoryRegistrations = new Map<string, any>();
 
 // In-memory registration audit list
-const globalRegistrationsList: any[] = [
+export const globalRegistrationsList: any[] = [
   {
     id: 101,
     eventId: 1,
