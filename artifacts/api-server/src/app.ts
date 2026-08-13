@@ -13,6 +13,21 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
+// Vercel Serverless Path Normalizer (Restores original requested URL when rewrites route to /api/index.js)
+app.use((req, _res, next) => {
+  const matched =
+    (req.headers["x-matched-path"] as string) ||
+    (req.headers["x-forwarded-url"] as string) ||
+    (req.headers["x-vercel-matched-path"] as string);
+
+  if (matched && (matched.startsWith("/api") || matched === "/api")) {
+    const queryIndex = req.url.indexOf("?");
+    const queryString = queryIndex !== -1 ? req.url.slice(queryIndex) : "";
+    req.url = matched.includes("?") ? matched : `${matched}${queryString}`;
+  }
+  next();
+});
+
 app.use(
   pinoHttp({
     logger,

@@ -91174,6 +91174,15 @@ var logger = (0, import_pino.default)({
 // src/app.ts
 var PgSession2 = connectPgSimple(import_express_session.default);
 var app = (0, import_express13.default)();
+app.use((req, _res, next) => {
+  const matched = req.headers["x-matched-path"] || req.headers["x-forwarded-url"] || req.headers["x-vercel-matched-path"];
+  if (matched && (matched.startsWith("/api") || matched === "/api")) {
+    const queryIndex = req.url.indexOf("?");
+    const queryString = queryIndex !== -1 ? req.url.slice(queryIndex) : "";
+    req.url = matched.includes("?") ? matched : `${matched}${queryString}`;
+  }
+  next();
+});
 app.use(
   (0, import_pino_http.default)({
     logger,
